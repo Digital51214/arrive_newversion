@@ -23,23 +23,18 @@ class SimpleBottomBar extends StatelessWidget {
       case 0:
         screen = const ConceptBScreen();
         break;
-
       case 1:
         screen = const WriteScreen();
         break;
-
       case 2:
         screen = const ArriveComposeScreen();
         break;
-
       case 3:
         screen = const CommunityMainScreen();
         break;
-
       case 4:
         screen = const ProfileScreen();
         break;
-
       default:
         screen = const ConceptBScreen();
     }
@@ -52,20 +47,28 @@ class SimpleBottomBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final mediaQuery = MediaQuery.of(context);
+
+    // Base design was made for ~390px wide screen
+    final double scaleFactor = (mediaQuery.size.width / 390).clamp(0.75, 1.4);
+
+    // Respect the device's bottom safe area (home indicator on iPhone,
+    // gesture nav bar on Android) — never hardcode 45
+    final double bottomPadding = mediaQuery.padding.bottom > 0
+        ? mediaQuery.padding.bottom
+        : 12.0 * scaleFactor;
+
     return Container(
       color: const Color(0xFF252D42),
-      padding: const EdgeInsets.fromLTRB(0, 10, 0, 45),
+      padding: EdgeInsets.fromLTRB(0, 10 * scaleFactor, 0, bottomPadding),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceAround,
         children: [
-          _item(context, 0, "🏠", "Home"),
-          _item(context, 1, "📖", "Journal"),
-
-          /// CENTER CLICKABLE ITEM
-          _arriveItem(context, 2),
-
-          _item(context, 3, "🌸", "Community"),
-          _item(context, 4, "🤵🏼", "Profile"),
+          _item(context, 0, "🏠", "Home", scaleFactor),
+          _item(context, 1, "📖", "Journal", scaleFactor),
+          _arriveItem(context, 2, scaleFactor),
+          _item(context, 3, "🌸", "Community", scaleFactor),
+          _item(context, 4, "🤵🏼", "Profile", scaleFactor),
         ],
       ),
     );
@@ -76,6 +79,7 @@ class SimpleBottomBar extends StatelessWidget {
       int index,
       String icon,
       String label,
+      double scaleFactor,
       ) {
     final bool isSelected = currentIndex == index;
 
@@ -90,15 +94,13 @@ class SimpleBottomBar extends StatelessWidget {
             children: [
               Text(
                 icon,
-                style: const TextStyle(fontSize: 20),
+                style: TextStyle(fontSize: 20 * scaleFactor),
               ),
-
-              const SizedBox(height: 4),
-
+              SizedBox(height: 4 * scaleFactor),
               Text(
                 label,
                 style: TextStyle(
-                  fontSize: 10,
+                  fontSize: 10 * scaleFactor,
                   fontWeight: FontWeight.w500,
                   color: isSelected
                       ? const Color(0xFF7DDE8A)
@@ -112,7 +114,7 @@ class SimpleBottomBar extends StatelessWidget {
     );
   }
 
-  Widget _arriveItem(BuildContext context, int index) {
+  Widget _arriveItem(BuildContext context, int index, double scaleFactor) {
     final bool isSelected = currentIndex == index;
 
     return Expanded(
@@ -121,19 +123,17 @@ class SimpleBottomBar extends StatelessWidget {
         behavior: HitTestBehavior.opaque,
         child: Opacity(
           opacity: isSelected ? 1.0 : 0.55,
-          child: const Column(
+          child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              _ArriveLogoWidget(),
-
-              SizedBox(height: 7),
-
+              _ArriveLogoWidget(scaleFactor: scaleFactor),
+              SizedBox(height: 7 * scaleFactor),
               Text(
                 'Arrive',
                 style: TextStyle(
-                  fontSize: 10,
+                  fontSize: 10 * scaleFactor,
                   fontWeight: FontWeight.w500,
-                  color: Color(0xFF8DBFAA),
+                  color: const Color(0xFF8DBFAA),
                 ),
               ),
             ],
@@ -145,24 +145,31 @@ class SimpleBottomBar extends StatelessWidget {
 }
 
 class _ArriveLogoWidget extends StatelessWidget {
-  const _ArriveLogoWidget();
+  final double scaleFactor;
+
+  const _ArriveLogoWidget({required this.scaleFactor});
 
   @override
   Widget build(BuildContext context) {
     return CustomPaint(
-      size: const Size(20, 22),
-      painter: _ArriveLogoPainter(),
+      size: Size(20 * scaleFactor, 22 * scaleFactor),
+      painter: _ArriveLogoPainter(scaleFactor: scaleFactor),
     );
   }
 }
 
 class _ArriveLogoPainter extends CustomPainter {
+  final double scaleFactor;
+
+  const _ArriveLogoPainter({required this.scaleFactor});
+
   @override
   void paint(Canvas canvas, Size size) {
     final paint = Paint()
       ..color = const Color(0xFF7DDE8A)
       ..style = PaintingStyle.stroke
-      ..strokeWidth = 1.5
+    // Stroke width also scales so the logo doesn't look too thick/thin
+      ..strokeWidth = (1.5 * scaleFactor).clamp(1.0, 2.5)
       ..strokeCap = StrokeCap.round;
 
     final sx = size.width / 100;
@@ -207,5 +214,6 @@ class _ArriveLogoPainter extends CustomPainter {
   }
 
   @override
-  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
+  bool shouldRepaint(covariant _ArriveLogoPainter oldDelegate) =>
+      oldDelegate.scaleFactor != scaleFactor;
 }

@@ -1,14 +1,23 @@
 import 'dart:math' as math;
 import 'dart:ui';
+import 'package:arrive_newversion/new_service_screens/quick_thoughts_service.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../theme/arrive_colors.dart';
 import '../widgets/arrive_background.dart';
 import '../widgets/arrive_header.dart';
+
 import 'arrive_response_screen.dart';
 
 class ArriveLoadingScreen extends StatefulWidget {
-  const ArriveLoadingScreen({super.key});
+  final String thought;
+  final String mode;
+
+  const ArriveLoadingScreen({
+    super.key,
+    required this.thought,
+    required this.mode,
+  });
 
   @override
   State<ArriveLoadingScreen> createState() => _ArriveLoadingScreenState();
@@ -17,6 +26,14 @@ class ArriveLoadingScreen extends StatefulWidget {
 class _ArriveLoadingScreenState extends State<ArriveLoadingScreen>
     with SingleTickerProviderStateMixin {
   late final AnimationController _controller;
+  String _statusText = 'Taking your words in…';
+
+  final List<String> _loadingMessages = [
+    'Taking your words in…',
+    'Listening carefully…',
+    'Finding the right words…',
+    'Almost there…',
+  ];
 
   @override
   void initState() {
@@ -25,16 +42,75 @@ class _ArriveLoadingScreenState extends State<ArriveLoadingScreen>
       vsync: this,
       duration: const Duration(milliseconds: 1600),
     )..repeat();
-    Future.delayed(const Duration(seconds: 5), () {
-      Navigator.pushReplacement(
-        context,
-        MaterialPageRoute(
-          builder: (_) => const ArriveResponseScreen(),
-        ),
-      );
+
+    _cycleMessages();
+    _callApi();
+  }
+
+  void _cycleMessages() {
+    int index = 0;
+    Future.doWhile(() async {
+      await Future.delayed(const Duration(milliseconds: 1800));
+      if (!mounted) return false;
+      index = (index + 1) % _loadingMessages.length;
+      setState(() {
+        _statusText = _loadingMessages[index];
+      });
+      return true;
     });
   }
 
+  Future<void> _callApi() async {
+    try {
+      final response = await QuickThoughtService.sendQuickThought(
+        thought: widget.thought,
+        mode: widget.mode,
+      );
+
+      if (!mounted) return;
+
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(
+          builder: (_) => ArriveResponseScreen(
+            thought: widget.thought,
+            mode: widget.mode,
+            response: response,
+          ),
+        ),
+      );
+    } catch (e) {
+      if (!mounted) return;
+
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(
+          builder: (_) => ArriveResponseScreen(
+            thought: widget.thought,
+            mode: widget.mode,
+            response: QuickThoughtResponse(
+              paragraph:
+              'Something went wrong while reaching out. Please check your connection and try again.',
+              q1: 'What are you feeling right now?',
+              q2: 'What do you need most in this moment?',
+              q3: 'What small step could help you feel better?',
+            ),
+          ),
+        ),
+      );
+    }
+  }
+
+  String get _modeIcon {
+    switch (widget.mode) {
+      case 'Friend':
+        return '🤝';
+      case 'Coach':
+        return '⚡';
+      default:
+        return '🧘';
+    }
+  }
 
   @override
   void dispose() {
@@ -102,8 +178,11 @@ class _ArriveLoadingScreenState extends State<ArriveLoadingScreen>
                                       ),
                                     ],
                                   ),
-                                  child: const Center(
-                                    child: Text('🧘', style: TextStyle(fontSize: 32)),
+                                  child: Center(
+                                    child: Text(
+                                      _modeIcon,
+                                      style: const TextStyle(fontSize: 32),
+                                    ),
                                   ),
                                 ),
                               ),
@@ -121,14 +200,18 @@ class _ArriveLoadingScreenState extends State<ArriveLoadingScreen>
                         ),
                       ),
                       const SizedBox(height: 8),
-                      Text(
-                        'Taking your words in. This will only take a moment.',
-                        textAlign: TextAlign.center,
-                        style: GoogleFonts.dmSans(
-                          fontSize: 13,
-                          height: 1.6,
-                          fontWeight: FontWeight.w300,
-                          color: ArriveColors.textSoft,
+                      AnimatedSwitcher(
+                        duration: const Duration(milliseconds: 400),
+                        child: Text(
+                          _statusText,
+                          key: ValueKey(_statusText),
+                          textAlign: TextAlign.center,
+                          style: GoogleFonts.dmSans(
+                            fontSize: 13,
+                            height: 1.6,
+                            fontWeight: FontWeight.w300,
+                            color: ArriveColors.textSoft,
+                          ),
                         ),
                       ),
                       const SizedBox(height: 14),
@@ -145,7 +228,7 @@ class _ArriveLoadingScreenState extends State<ArriveLoadingScreen>
                           borderRadius: BorderRadius.circular(20),
                         ),
                         child: Text(
-                          '✦ Therapist Mode',
+                          '✦ ${widget.mode} Mode',
                           style: GoogleFonts.dmSans(
                             fontSize: 11,
                             letterSpacing: 0.8,

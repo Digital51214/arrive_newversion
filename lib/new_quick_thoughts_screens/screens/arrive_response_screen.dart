@@ -2,20 +2,80 @@ import 'dart:ui';
 
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import '../../new_AI_feedback/screens/screen_write.dart';
+import '../../new_service_screens/quick_thoughts_service.dart';
 import '../theme/arrive_colors.dart';
 import '../widgets/arrive_background.dart';
 import '../widgets/arrive_header.dart';
+
 import 'arrive_compose_screen.dart';
 
-class ArriveResponseScreen extends StatelessWidget {
-  const ArriveResponseScreen({super.key});
+
+class ArriveResponseScreen extends StatefulWidget {
+  final String thought;
+  final String mode;
+  final QuickThoughtResponse response;
+
+  const ArriveResponseScreen({
+    super.key,
+    required this.thought,
+    required this.mode,
+    required this.response,
+  });
+
+  @override
+  State<ArriveResponseScreen> createState() => _ArriveResponseScreenState();
+}
+
+class _ArriveResponseScreenState extends State<ArriveResponseScreen> {
+  final Map<int, bool> _expandedQuestions = {};
+
+  // Hard-coded question labels — exactly like original design
+  static const List<String> _questionLabels = [
+    'What feels heaviest about this?',
+    'What do you need most right now?',
+    'What would being kinder look like?',
+  ];
+
+  String get _modeIcon {
+    switch (widget.mode) {
+      case 'Friend':
+        return '🤝';
+      case 'Coach':
+        return '⚡';
+      default:
+        return '🧘';
+    }
+  }
+
+  void _switchMode() {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => ArriveComposeScreen(
+          preservedThought: widget.thought,
+          preservedMode: widget.mode,
+        ),
+      ),
+    );
+  }
+
+  void _newThought() {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => const ArriveComposeScreen(),
+      ),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
-    final followups = [
-      'What feels heaviest about this?',
-      'What do you need most right now?',
-      'What would being kinder look like?',
+    // Answers from API response — already available, no extra call needed
+    final answers = [
+      widget.response.q1,
+      widget.response.q2,
+      widget.response.q3,
     ];
 
     return ArriveBackground(
@@ -29,6 +89,7 @@ class ArriveResponseScreen extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
+                    // Header + user thought bubble
                     Padding(
                       padding: const EdgeInsets.fromLTRB(22, 22, 22, 14),
                       child: Column(
@@ -45,8 +106,11 @@ class ArriveResponseScreen extends StatelessWidget {
                                     color: const Color.fromRGBO(184, 168, 216, 0.35),
                                   ),
                                 ),
-                                child: const Center(
-                                  child: Text('🧘', style: TextStyle(fontSize: 18)),
+                                child: Center(
+                                  child: Text(
+                                    _modeIcon,
+                                    style: const TextStyle(fontSize: 18),
+                                  ),
                                 ),
                               ),
                               const SizedBox(width: 10),
@@ -55,7 +119,7 @@ class ArriveResponseScreen extends StatelessWidget {
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
                                     Text(
-                                      'Therapist',
+                                      widget.mode,
                                       style: GoogleFonts.dmSans(
                                         fontSize: 13,
                                         fontWeight: FontWeight.w500,
@@ -93,7 +157,7 @@ class ArriveResponseScreen extends StatelessWidget {
                                   ),
                                 ),
                                 child: Text(
-                                  '"Today was harder than I expected because I kept pretending I was okay when I really wasn\'t…"',
+                                  '"${widget.thought}"',
                                   style: GoogleFonts.cormorantGaramond(
                                     fontSize: 15,
                                     height: 1.5,
@@ -107,6 +171,8 @@ class ArriveResponseScreen extends StatelessWidget {
                         ],
                       ),
                     ),
+
+                    // Main response paragraph
                     Padding(
                       padding: const EdgeInsets.symmetric(horizontal: 20),
                       child: ClipRRect(
@@ -129,7 +195,7 @@ class ArriveResponseScreen extends StatelessWidget {
                               ],
                             ),
                             child: Text(
-                              'That sounds exhausting, especially when part of your energy is going into holding yourself together for everyone else. Sometimes the hardest part is not just the day itself, but feeling like you have to carry it quietly. You do not have to make perfect sense of it right away; even noticing that you were not really okay is already something honest and important. Maybe the gentlest next step is asking what part of today hurt the most.',
+                              widget.response.paragraph,
                               style: GoogleFonts.dmSans(
                                 fontSize: 15,
                                 height: 1.85,
@@ -141,6 +207,8 @@ class ArriveResponseScreen extends StatelessWidget {
                         ),
                       ),
                     ),
+
+                    // Follow-up label
                     Padding(
                       padding: const EdgeInsets.fromLTRB(22, 18, 22, 10),
                       child: Text(
@@ -153,83 +221,166 @@ class ArriveResponseScreen extends StatelessWidget {
                         ),
                       ),
                     ),
+
+                    // Expandable follow-up questions with inline answers
                     Padding(
                       padding: const EdgeInsets.symmetric(horizontal: 20),
                       child: Column(
-                        children: followups
-                            .map(
-                              (item) => Padding(
-                                padding: const EdgeInsets.only(bottom: 8),
-                                child: ClipRRect(
-                                  borderRadius: BorderRadius.circular(14),
-                                  child: BackdropFilter(
-                                    filter: ImageFilter.blur(sigmaX: 14, sigmaY: 14),
-                                    child: Container(
-                                      width: double.infinity,
-                                      padding: const EdgeInsets.symmetric(
-                                        horizontal: 16,
-                                        vertical: 13,
+                        children: List.generate(_questionLabels.length, (index) {
+                          final question = _questionLabels[index];
+                          final answer = answers[index];
+                          final isExpanded = _expandedQuestions[index] ?? false;
+
+                          return Padding(
+                            padding: const EdgeInsets.only(bottom: 8),
+                            child: GestureDetector(
+                              onTap: () {
+                                setState(() {
+                                  _expandedQuestions[index] = !isExpanded;
+                                });
+                              },
+                              child: ClipRRect(
+                                borderRadius: BorderRadius.circular(14),
+                                child: BackdropFilter(
+                                  filter: ImageFilter.blur(sigmaX: 14, sigmaY: 14),
+                                  child: AnimatedContainer(
+                                    duration: const Duration(milliseconds: 300),
+                                    curve: Curves.easeInOut,
+                                    width: double.infinity,
+                                    decoration: BoxDecoration(
+                                      color: isExpanded
+                                          ? const Color.fromRGBO(184, 168, 216, 0.10)
+                                          : ArriveColors.glass,
+                                      borderRadius: BorderRadius.circular(14),
+                                      border: Border.all(
+                                        color: isExpanded
+                                            ? const Color.fromRGBO(184, 168, 216, 0.40)
+                                            : ArriveColors.glassBorder,
                                       ),
-                                      decoration: BoxDecoration(
-                                        color: ArriveColors.glass,
-                                        borderRadius: BorderRadius.circular(14),
-                                        border: Border.all(
-                                          color: ArriveColors.glassBorder,
-                                        ),
-                                      ),
-                                      child: Row(
-                                        children: [
-                                          Expanded(
-                                            child: Text(
-                                              item,
-                                              style: GoogleFonts.dmSans(
-                                                fontSize: 13,
-                                                height: 1.4,
-                                                color: ArriveColors.textSoft,
+                                    ),
+                                    child: Column(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      children: [
+                                        // Question row (always visible)
+                                        Padding(
+                                          padding: const EdgeInsets.symmetric(
+                                            horizontal: 16,
+                                            vertical: 13,
+                                          ),
+                                          child: Row(
+                                            children: [
+                                              Expanded(
+                                                child: Text(
+                                                  question,
+                                                  style: GoogleFonts.dmSans(
+                                                    fontSize: 13,
+                                                    height: 1.4,
+                                                    color: isExpanded
+                                                        ? ArriveColors.lavender
+                                                        : ArriveColors.textSoft,
+                                                    fontWeight: isExpanded
+                                                        ? FontWeight.w500
+                                                        : FontWeight.w400,
+                                                  ),
+                                                ),
                                               ),
-                                            ),
+                                              const SizedBox(width: 10),
+                                              AnimatedRotation(
+                                                turns: isExpanded ? 0.25 : 0,
+                                                duration: const Duration(milliseconds: 300),
+                                                child: Text(
+                                                  '→',
+                                                  style: GoogleFonts.dmSans(
+                                                    fontSize: 14,
+                                                    color: isExpanded
+                                                        ? ArriveColors.lavender
+                                                        : ArriveColors.textMuted,
+                                                  ),
+                                                ),
+                                              ),
+                                            ],
                                           ),
-                                          const SizedBox(width: 10),
-                                          Text(
-                                            '→',
-                                            style: GoogleFonts.dmSans(
-                                              fontSize: 14,
-                                              color: ArriveColors.textMuted,
-                                            ),
+                                        ),
+
+                                        // Answer — expands below the question
+                                        AnimatedCrossFade(
+                                          duration: const Duration(milliseconds: 300),
+                                          crossFadeState: isExpanded
+                                              ? CrossFadeState.showFirst
+                                              : CrossFadeState.showSecond,
+                                          firstChild: Column(
+                                            crossAxisAlignment: CrossAxisAlignment.start,
+                                            children: [
+                                              Padding(
+                                                padding: const EdgeInsets.fromLTRB(16, 0, 16, 0),
+                                                child: Container(
+                                                  height: 1,
+                                                  color: const Color.fromRGBO(184, 168, 216, 0.20),
+                                                ),
+                                              ),
+                                              Padding(
+                                                padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
+                                                child: Text(
+                                                  answer,
+                                                  style: GoogleFonts.dmSans(
+                                                    fontSize: 13,
+                                                    height: 1.75,
+                                                    fontWeight: FontWeight.w300,
+                                                    color: ArriveColors.textSoft,
+                                                  ),
+                                                ),
+                                              ),
+                                            ],
                                           ),
-                                        ],
-                                      ),
+                                          secondChild: const SizedBox.shrink(),
+                                        ),
+                                      ],
                                     ),
                                   ),
                                 ),
                               ),
-                            )
-                            .toList(),
+                            ),
+                          );
+                        }),
                       ),
                     ),
+
+                    // Action buttons
                     Padding(
                       padding: const EdgeInsets.fromLTRB(20, 16, 20, 0),
                       child: Row(
-                        children: const [
+                        children: [
                           Expanded(
                             child: _ActionButton(
                               text: '📖 Save to Journal',
                               isPrimary: true,
+                              onTap: () {
+                                Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (_) => WriteScreen(
+                                      initialBody: widget.thought,
+                                    ),
+                                  ),
+                                );
+                              },
                             ),
                           ),
-                          SizedBox(width: 10),
+                          const SizedBox(width: 10),
                           Expanded(
                             child: _ActionButton(
                               text: '🔄 Switch Mode',
                               isPrimary: false,
+                              onTap: _switchMode,
                             ),
                           ),
                         ],
                       ),
                     ),
-                    const Padding(
-                      padding: EdgeInsets.fromLTRB(20, 14, 20, 0),
-                      child: _NewThoughtButton(),
+
+                    Padding(
+                      padding: const EdgeInsets.fromLTRB(20, 14, 20, 0),
+                      child: _NewThoughtButton(onTap: _newThought),
                     ),
                   ],
                 ),
@@ -245,42 +396,50 @@ class ArriveResponseScreen extends StatelessWidget {
 class _ActionButton extends StatelessWidget {
   final String text;
   final bool isPrimary;
+  final VoidCallback? onTap;
 
-  const _ActionButton({required this.text, required this.isPrimary});
+  const _ActionButton({
+    required this.text,
+    required this.isPrimary,
+    this.onTap,
+  });
 
   @override
   Widget build(BuildContext context) {
-    return ClipRRect(
-      borderRadius: BorderRadius.circular(14),
-      child: BackdropFilter(
-        filter: ImageFilter.blur(sigmaX: 12, sigmaY: 12),
-        child: Container(
-          padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 10),
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(14),
-            border: Border.all(
-              color: isPrimary
-                  ? const Color.fromRGBO(125, 222, 138, 0.35)
-                  : ArriveColors.glassBorder,
+    return GestureDetector(
+      onTap: onTap,
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(14),
+        child: BackdropFilter(
+          filter: ImageFilter.blur(sigmaX: 12, sigmaY: 12),
+          child: Container(
+            padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 10),
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(14),
+              border: Border.all(
+                color: isPrimary
+                    ? const Color.fromRGBO(125, 222, 138, 0.35)
+                    : ArriveColors.glassBorder,
+              ),
+              gradient: isPrimary
+                  ? const LinearGradient(
+                colors: [
+                  Color.fromRGBO(125, 222, 138, 0.20),
+                  Color.fromRGBO(141, 191, 170, 0.15),
+                ],
+              )
+                  : null,
+              color: isPrimary ? null : ArriveColors.glass,
             ),
-            gradient: isPrimary
-                ? const LinearGradient(
-                    colors: [
-                      Color.fromRGBO(125, 222, 138, 0.20),
-                      Color.fromRGBO(141, 191, 170, 0.15),
-                    ],
-                  )
-                : null,
-            color: isPrimary ? null : ArriveColors.glass,
-          ),
-          child: Center(
-            child: Text(
-              text,
-              textAlign: TextAlign.center,
-              style: GoogleFonts.dmSans(
-                fontSize: 12,
-                fontWeight: FontWeight.w500,
-                color: isPrimary ? ArriveColors.green : ArriveColors.textSoft,
+            child: Center(
+              child: Text(
+                text,
+                textAlign: TextAlign.center,
+                style: GoogleFonts.dmSans(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w500,
+                  color: isPrimary ? ArriveColors.green : ArriveColors.textSoft,
+                ),
               ),
             ),
           ),
@@ -291,19 +450,14 @@ class _ActionButton extends StatelessWidget {
 }
 
 class _NewThoughtButton extends StatelessWidget {
-  const _NewThoughtButton();
+  final VoidCallback onTap;
+
+  const _NewThoughtButton({required this.onTap});
 
   @override
   Widget build(BuildContext context) {
     return GestureDetector(
-      onTap: (){
-        Navigator.push(
-          context,
-          MaterialPageRoute(
-            builder: (context) => const ArriveComposeScreen(),
-          ),
-        );
-      },
+      onTap: onTap,
       child: ClipRRect(
         borderRadius: BorderRadius.circular(14),
         child: BackdropFilter(

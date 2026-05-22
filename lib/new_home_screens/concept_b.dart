@@ -3,6 +3,7 @@ import 'package:google_fonts/google_fonts.dart';
 
 import '../new_AI_feedback/screens/all_journals_list.dart';
 import '../new_AI_feedback/screens/screen_write.dart';
+import '../new_AI_feedback/screens/screen_mode.dart';
 import '../new_bottom_bar/bottom_nav_bar.dart';
 import '../new_onboarding_screens/theme/app_theme.dart';
 import '../new_quick_thoughts_screens/screens/arrive_compose_screen.dart';
@@ -29,6 +30,10 @@ class _ConceptBScreenState extends State<ConceptBScreen> {
   bool _isJournalLoading = true;
   List<Map<String, dynamic>> _todayJournals = [];
 
+  // ── Search ──
+  final TextEditingController _searchController = TextEditingController();
+  String _searchQuery = '';
+
   // ── Daily Prompt ──
   String _dailyPrompt =
       '"What are you carrying today that you\'d like to set down?"';
@@ -38,43 +43,74 @@ class _ConceptBScreenState extends State<ConceptBScreen> {
   int _streakCount = 0;
   bool _isStreakLoading = true;
 
+  // ── Gender ──
+  // 'female' ya kuch bhi — SessionManager se fetch karo
+  String _userGender = '';
+  bool _isCommunityExpanded = false;
+
   @override
   void initState() {
     super.initState();
     _loadUserName();
     _getTodayJournals();
     _loadDailyPrompt();
-    _loadStreak(); // ← ADD THIS
+    _loadStreak();
+    _loadUserGender();
+    _searchController.addListener(() {
+      setState(() => _searchQuery = _searchController.text.trim().toLowerCase());
+    });
   }
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
+  }
+
+  // ── Filtered journals for search ──
+  List<Map<String, dynamic>> get _filteredJournals {
+    if (_searchQuery.isEmpty) return _todayJournals;
+    return _todayJournals.where((item) {
+      final title = item['title']?.toString().toLowerCase() ?? '';
+      final content = item['content']?.toString().toLowerCase() ?? '';
+      final body = item['body']?.toString().toLowerCase() ?? '';
+      return title.contains(_searchQuery) ||
+          content.contains(_searchQuery) ||
+          body.contains(_searchQuery);
+    }).toList();
+  }
+
+  // ── Load user gender ──
+  Future<void> _loadUserGender() async {
+    // SessionManager.getGender() — apne API ke hisaab se implement karo
+    // Yahan 'female' / 'male' / 'other' expected hai
+    try {
+      final gender = await SessionManager.getGender(); // apna method
+      if (!mounted) return;
+      setState(() => _userGender = (gender ?? '').toLowerCase().trim());
+    } catch (_) {
+      // agar method na ho, default empty
+    }
+  }
+
+  bool get _isFemale => _userGender == 'female';
 
   // ── Fetch streak ──
   Future<void> _loadStreak() async {
     setState(() => _isStreakLoading = true);
-
     try {
       final userId = await SessionManager.getUserId();
-
-      print('---------- LOAD STREAK ----------');
-      print('USER ID: $userId');
-
       if (userId == 0) {
-        print('STREAK: user not logged in, skipping');
         if (mounted) setState(() => _isStreakLoading = false);
         return;
       }
-
       final streak = await JournalStreakService.fetchStreak(userId: userId);
-
-      print('STREAK RESULT: $streak');
-      print('---------------------------------');
-
       if (!mounted) return;
       setState(() {
         _streakCount = streak;
         _isStreakLoading = false;
       });
     } catch (e) {
-      print('LOAD STREAK ERROR: $e');
       if (mounted) setState(() => _isStreakLoading = false);
     }
   }
@@ -82,11 +118,8 @@ class _ConceptBScreenState extends State<ConceptBScreen> {
   // ── Fetch daily prompt ──
   Future<void> _loadDailyPrompt() async {
     setState(() => _isPromptLoading = true);
-
     final prompt = await DailyPromptService.fetchTodayPrompt();
-
     if (!mounted) return;
-
     setState(() {
       if (prompt != null) _dailyPrompt = '"$prompt"';
       _isPromptLoading = false;
@@ -95,9 +128,7 @@ class _ConceptBScreenState extends State<ConceptBScreen> {
 
   Future<void> _loadUserName() async {
     final firstName = await SessionManager.getFirstName();
-
     if (!mounted) return;
-
     setState(() {
       _userName = firstName.trim().isEmpty ? 'Kezia' : firstName.trim();
     });
@@ -105,51 +136,42 @@ class _ConceptBScreenState extends State<ConceptBScreen> {
 
   Future<void> _getTodayJournals() async {
     setState(() => _isJournalLoading = true);
-
     try {
       final userId = await SessionManager.getUserId();
-
       if (userId == 0) {
         if (!mounted) return;
-
         setState(() {
           _todayJournals = [];
           _isJournalLoading = false;
         });
-
         return;
       }
 
       final result = await JournalListService.getUserJournals(userId: userId);
-
       if (!mounted) return;
 
       if (result['success'] == true && result['journals'] is List) {
         final journals = (result['journals'] as List)
-            .map<Map<String, dynamic>>(
-              (e) => Map<String, dynamic>.from(e),
-        )
+            .map<Map<String, dynamic>>((e) => Map<String, dynamic>.from(e))
             .toList();
 
         final now = DateTime.now();
-
         final todayEntries = journals.where((item) {
-          final createdAt = DateTime.tryParse(
-            item['created_at']?.toString() ?? '',
-          );
-
+          final createdAt =
+          DateTime.tryParse(item['created_at']?.toString() ?? '');
           if (createdAt == null) return false;
-
           return createdAt.year == now.year &&
               createdAt.month == now.month &&
               createdAt.day == now.day;
         }).toList();
 
         todayEntries.sort((a, b) {
-          final aDate = DateTime.tryParse(a['created_at']?.toString() ?? '') ??
-              DateTime(1900);
-          final bDate = DateTime.tryParse(b['created_at']?.toString() ?? '') ??
-              DateTime(1900);
+          final aDate =
+              DateTime.tryParse(a['created_at']?.toString() ?? '') ??
+                  DateTime(1900);
+          final bDate =
+              DateTime.tryParse(b['created_at']?.toString() ?? '') ??
+                  DateTime(1900);
           return bDate.compareTo(aDate);
         });
 
@@ -165,9 +187,7 @@ class _ConceptBScreenState extends State<ConceptBScreen> {
       }
     } catch (e) {
       print('GET TODAY JOURNALS ERROR: $e');
-
       if (!mounted) return;
-
       setState(() {
         _todayJournals = [];
         _isJournalLoading = false;
@@ -183,51 +203,62 @@ class _ConceptBScreenState extends State<ConceptBScreen> {
   String _journalPreview(Map<String, dynamic> item) {
     final content = item['content']?.toString().trim();
     final body = item['body']?.toString().trim();
-
     if (content != null && content.isNotEmpty) return content;
     if (body != null && body.isNotEmpty) return body;
-
     return 'Your latest journal entry is saved here...';
   }
 
   String _journalEmoji(Map<String, dynamic> item) {
     final difficulties = item['difficulties']?.toString().trim();
     final emote = item['emote']?.toString().trim();
-
     if (difficulties != null &&
         difficulties.isNotEmpty &&
-        difficulties.toLowerCase() != 'null') {
-      return difficulties;
-    }
-
+        difficulties.toLowerCase() != 'null') return difficulties;
     if (emote != null && emote.isNotEmpty && emote.toLowerCase() != 'null') {
       return emote;
     }
-
     return '📔';
   }
 
   String _journalDay(Map<String, dynamic> item) {
     final rawDate = item['created_at']?.toString() ?? '';
     final date = DateTime.tryParse(rawDate);
-
     if (date == null) return '--';
-
     return date.day.toString().padLeft(2, '0');
   }
 
   String _journalMonth(Map<String, dynamic> item) {
     final rawDate = item['created_at']?.toString() ?? '';
     final date = DateTime.tryParse(rawDate);
-
     if (date == null) return '';
-
     const months = [
       'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
       'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec',
     ];
-
     return months[date.month - 1];
+  }
+
+  void _openAiFeedback(Map<String, dynamic> journal) {
+    final journalId =
+        int.tryParse(journal['id']?.toString() ?? '') ??
+            int.tryParse(journal['journal_id']?.toString() ?? '') ??
+            0;
+
+    SessionManager.getUserId().then((userId) {
+      if (!mounted) return;
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (_) => ModeScreen(
+            userId: userId,
+            journalId: journalId,
+            title: _journalTitle(journal),
+            body: _journalPreview(journal),
+            tags: [],
+          ),
+        ),
+      );
+    });
   }
 
   @override
@@ -269,7 +300,14 @@ class _ConceptBScreenState extends State<ConceptBScreen> {
 
                         const _SectionRow(title: 'Your Tools'),
                         const SizedBox(height: 4),
-                        const _HorizontalTools(),
+                        _HorizontalTools(
+                          isFemale: _isFemale,
+                          isCommunityExpanded: _isCommunityExpanded,
+                          onCommunityArrowTap: () {
+                            setState(() =>
+                            _isCommunityExpanded = !_isCommunityExpanded);
+                          },
+                        ),
                         const SizedBox(height: 4),
 
                         Row(
@@ -288,9 +326,10 @@ class _ConceptBScreenState extends State<ConceptBScreen> {
 
                         const _SectionRow(title: 'Streak'),
                         const SizedBox(height: 4),
-                        _streakMini(), // ← now uses live _streakCount
+                        _streakMini(),
                         const SizedBox(height: 12),
 
+                        // ── Recent Entries heading ──
                         _SectionRow(
                           title: 'Recent Entries',
                           link: 'See all →',
@@ -306,6 +345,7 @@ class _ConceptBScreenState extends State<ConceptBScreen> {
 
                         const SizedBox(height: 4),
 
+                        // ── Search results / entries ──
                         if (_isJournalLoading)
                           const Padding(
                             padding: EdgeInsets.symmetric(vertical: 20),
@@ -315,21 +355,26 @@ class _ConceptBScreenState extends State<ConceptBScreen> {
                               ),
                             ),
                           )
-                        else if (_todayJournals.isNotEmpty)
-                          ..._todayJournals.map((journal) {
-                            return Padding(
-                              padding: const EdgeInsets.only(bottom: 8),
-                              child: _EntryRow(
-                                day: _journalDay(journal),
-                                month: _journalMonth(journal),
-                                title: _journalTitle(journal),
-                                preview: _journalPreview(journal),
-                                mood: _journalEmoji(journal),
-                              ),
-                            );
-                          }).toList()
-                        else
-                          const _EmptyRecentEntry(),
+                        else if (_searchQuery.isNotEmpty &&
+                            _filteredJournals.isEmpty)
+                          _noSearchResults()
+                        else if (_filteredJournals.isNotEmpty)
+                            ..._filteredJournals.map((journal) {
+                              return Padding(
+                                padding: const EdgeInsets.only(bottom: 8),
+                                child: _EntryRow(
+                                  day: _journalDay(journal),
+                                  month: _journalMonth(journal),
+                                  title: _journalTitle(journal),
+                                  preview: _journalPreview(journal),
+                                  mood: _journalEmoji(journal),
+                                  searchQuery: _searchQuery,
+                                  onTap: () => _openAiFeedback(journal),
+                                ),
+                              );
+                            }).toList()
+                          else
+                            const _EmptyRecentEntry(),
 
                         const SizedBox(height: 20),
                       ],
@@ -352,7 +397,7 @@ class _ConceptBScreenState extends State<ConceptBScreen> {
                   ),
                 ).then((_) {
                   _getTodayJournals();
-                  _loadStreak(); // ← refresh streak after new journal entry
+                  _loadStreak();
                 });
               },
             ),
@@ -362,18 +407,45 @@ class _ConceptBScreenState extends State<ConceptBScreen> {
     );
   }
 
+  Widget _noSearchResults() {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 20),
+      child: _glassCard(
+        radius: 16,
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 18),
+        child: Row(
+          children: [
+            const Text('🔍', style: TextStyle(fontSize: 18)),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Text(
+                'No entries found for "$_searchQuery"',
+                style: GoogleFonts.dmSans(
+                  fontSize: 13,
+                  color: ArriveTheme.textMuted,
+                  decoration: TextDecoration.none,
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   Widget _journalSearchBar() {
     return _glassCard(
       radius: 18,
       padding: EdgeInsets.zero,
       child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 15),
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 13),
         child: Row(
           children: [
             const Text('🔍', style: TextStyle(fontSize: 18)),
             const SizedBox(width: 10),
             Expanded(
               child: TextField(
+                controller: _searchController,
                 cursorColor: ArriveTheme.textSoft,
                 style: GoogleFonts.dmSans(
                   fontSize: 14,
@@ -392,6 +464,27 @@ class _ConceptBScreenState extends State<ConceptBScreen> {
                 ),
               ),
             ),
+            // Clear button
+            if (_searchQuery.isNotEmpty)
+              GestureDetector(
+                onTap: () {
+                  _searchController.clear();
+                  setState(() => _searchQuery = '');
+                },
+                child: Container(
+                  width: 22,
+                  height: 22,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: Colors.white.withOpacity(0.10),
+                  ),
+                  child: const Icon(
+                    Icons.close,
+                    size: 13,
+                    color: Colors.white54,
+                  ),
+                ),
+              ),
           ],
         ),
       ),
@@ -510,7 +603,6 @@ class _ConceptBScreenState extends State<ConceptBScreen> {
     );
   }
 
-  // ── Streak widget — live _streakCount & _isStreakLoading ──
   Widget _streakMini() {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 20),
@@ -524,7 +616,6 @@ class _ConceptBScreenState extends State<ConceptBScreen> {
             const SizedBox(width: 12),
             Expanded(
               child: _isStreakLoading
-              // ── Skeleton loader while fetching ──
                   ? Container(
                 height: 18,
                 width: 120,
@@ -533,7 +624,6 @@ class _ConceptBScreenState extends State<ConceptBScreen> {
                   borderRadius: BorderRadius.circular(6),
                 ),
               )
-              // ── Live streak text ──
                   : RichText(
                 text: TextSpan(
                   style: GoogleFonts.dmSans(
@@ -555,7 +645,6 @@ class _ConceptBScreenState extends State<ConceptBScreen> {
                 ),
               ),
             ),
-            // ── Streak dots: filled up to streakCount, max 7 shown ──
             Row(
               mainAxisSize: MainAxisSize.min,
               children: List.generate(7, (i) {
@@ -621,12 +710,10 @@ class _ConceptBScreenState extends State<ConceptBScreen> {
     );
   }
 
-  Widget _blinkDot(Color color) {
-    return _BlinkDot(color: color);
-  }
+  Widget _blinkDot(Color color) => _BlinkDot(color: color);
 }
 
-// ─── Baaqi sab widgets bilkul same — koi change nahi ─────────────────────────
+// ─────────────────────────────────────────────────────────────────────────────
 
 class _EmptyRecentEntry extends StatelessWidget {
   const _EmptyRecentEntry();
@@ -653,7 +740,6 @@ class _EmptyRecentEntry extends StatelessWidget {
 
 class _BlinkDot extends StatefulWidget {
   final Color color;
-
   const _BlinkDot({required this.color});
 
   @override
@@ -668,12 +754,10 @@ class _BlinkDotState extends State<_BlinkDot>
   @override
   void initState() {
     super.initState();
-
     _controller = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 900),
     )..repeat(reverse: true);
-
     _opacity = Tween<double>(begin: 1.0, end: 0.08).animate(
       CurvedAnimation(parent: _controller, curve: Curves.easeInOut),
     );
@@ -692,10 +776,7 @@ class _BlinkDotState extends State<_BlinkDot>
       child: Container(
         width: 5,
         height: 5,
-        decoration: BoxDecoration(
-          shape: BoxShape.circle,
-          color: widget.color,
-        ),
+        decoration: BoxDecoration(shape: BoxShape.circle, color: widget.color),
       ),
     );
   }
@@ -713,10 +794,7 @@ class _MoodBanner extends StatelessWidget {
     ('✨', 'Thriving'),
   ];
 
-  const _MoodBanner({
-    required this.selected,
-    required this.onSelect,
-  });
+  const _MoodBanner({required this.selected, required this.onSelect});
 
   @override
   Widget build(BuildContext context) {
@@ -744,7 +822,6 @@ class _MoodBanner extends StatelessWidget {
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: List.generate(_moods.length, (i) {
                 final isSel = i == selected;
-
                 return GestureDetector(
                   onTap: () => onSelect(i),
                   child: Column(
@@ -806,23 +883,10 @@ class _SectionRow extends StatelessWidget {
   final String? link;
   final VoidCallback? onLinkTap;
 
-  const _SectionRow({
-    required this.title,
-    this.link,
-    this.onLinkTap,
-  });
+  const _SectionRow({required this.title, this.link, this.onLinkTap});
 
   @override
   Widget build(BuildContext context) {
-    final linkWidget = Text(
-      link ?? '',
-      style: GoogleFonts.dmSans(
-        fontSize: 11,
-        color: ArriveTheme.green.withOpacity(0.7),
-        decoration: TextDecoration.none,
-      ),
-    );
-
     return Padding(
       padding: const EdgeInsets.fromLTRB(22, 4, 22, 10),
       child: Row(
@@ -840,7 +904,14 @@ class _SectionRow extends StatelessWidget {
           if (link != null)
             GestureDetector(
               onTap: onLinkTap,
-              child: linkWidget,
+              child: Text(
+                link!,
+                style: GoogleFonts.dmSans(
+                  fontSize: 11,
+                  color: ArriveTheme.green.withOpacity(0.7),
+                  decoration: TextDecoration.none,
+                ),
+              ),
             ),
         ],
       ),
@@ -848,29 +919,52 @@ class _SectionRow extends StatelessWidget {
   }
 }
 
-class _HorizontalTools extends StatelessWidget {
-  const _HorizontalTools();
+// ── _HorizontalTools — gender-aware community card ───────────────────────────
 
-  static const _tools = [
-    ('🪞', 'AI Feedback', 'Reflect on your entry', Color(0xFFD4B896)),
-    ('🌸', 'Community', 'Postpartum Mode', Color(0xFFD296AF)),
-  ];
+class _HorizontalTools extends StatelessWidget {
+  final bool isFemale;
+  final bool isCommunityExpanded;
+  final VoidCallback onCommunityArrowTap;
+
+  const _HorizontalTools({
+    required this.isFemale,
+    required this.isCommunityExpanded,
+    required this.onCommunityArrowTap,
+  });
+
+  // AI Feedback card — same for all genders
+  static const _aiFeedback = (
+  '🪞',
+  'AI Feedback',
+  'Reflect on your entry',
+  Color(0xFFD4B896),
+  );
 
   @override
   Widget build(BuildContext context) {
+    // Community card values based on gender
+    final communityEmoji = isFemale
+        ? (isCommunityExpanded ? '🌏' : '🌸')
+        : '🌏';
+    final communityTitle = isFemale
+        ? (isCommunityExpanded ? 'Feed' : 'Community')
+        : 'Feed';
+    final communitySubtitle = isFemale
+        ? (isCommunityExpanded ? 'Speak freely mode' : 'Postpartum Mode')
+        : 'Speak freely mode';
+    const communityColor = Color(0xFFD296AF);
+
     return SizedBox(
       height: 116,
-      child: ListView.separated(
+      child: ListView(
         scrollDirection: Axis.horizontal,
+        physics: const BouncingScrollPhysics(),
         padding: const EdgeInsets.symmetric(horizontal: 20),
-        itemCount: _tools.length,
-        separatorBuilder: (_, __) => const SizedBox(width: 10),
-        itemBuilder: (_, i) {
-          final t = _tools[i];
-
-          return _GlassCard(
+        children: [
+          // ── AI Feedback Card ──
+          _GlassCard(
             borderRadius: 18,
-            topLineColor: t.$4.withOpacity(0.35),
+            topLineColor: _aiFeedback.$4.withOpacity(0.35),
             padding: const EdgeInsets.all(16),
             onTap: () {},
             child: SizedBox(
@@ -878,10 +972,11 @@ class _HorizontalTools extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(t.$1, style: GoogleFonts.dmSans(fontSize: 24)),
+                  Text(_aiFeedback.$1,
+                      style: GoogleFonts.dmSans(fontSize: 24)),
                   const SizedBox(height: 8),
                   Text(
-                    t.$2,
+                    _aiFeedback.$2,
                     style: GoogleFonts.cormorantGaramond(
                       fontSize: 16,
                       fontWeight: FontWeight.w600,
@@ -891,7 +986,7 @@ class _HorizontalTools extends StatelessWidget {
                   ),
                   const SizedBox(height: 3),
                   Text(
-                    t.$3,
+                    _aiFeedback.$3,
                     style: GoogleFonts.dmSans(
                       fontSize: 11,
                       color: ArriveTheme.textMuted,
@@ -902,12 +997,217 @@ class _HorizontalTools extends StatelessWidget {
                 ],
               ),
             ),
-          );
-        },
+          ),
+
+          const SizedBox(width: 10),
+
+          // ── Community Card ──
+          _CommunityToolCard(
+            emoji: communityEmoji,
+            title: communityTitle,
+            subtitle: communitySubtitle,
+            accentColor: communityColor,
+            isFemale: isFemale,
+            isExpanded: isCommunityExpanded,
+            onArrowTap: onCommunityArrowTap,
+            onCardTap: () {},
+          ),
+        ],
       ),
     );
   }
 }
+
+// ── Dedicated Community Card with arrow toggle ────────────────────────────────
+
+class _CommunityToolCard extends StatefulWidget {
+  final String emoji;
+  final String title;
+  final String subtitle;
+  final Color accentColor;
+  final bool isFemale;
+  final bool isExpanded;
+  final VoidCallback onArrowTap;
+  final VoidCallback onCardTap;
+
+  const _CommunityToolCard({
+    required this.emoji,
+    required this.title,
+    required this.subtitle,
+    required this.accentColor,
+    required this.isFemale,
+    required this.isExpanded,
+    required this.onArrowTap,
+    required this.onCardTap,
+  });
+
+  @override
+  State<_CommunityToolCard> createState() => _CommunityToolCardState();
+}
+
+class _CommunityToolCardState extends State<_CommunityToolCard> {
+  bool isArrowTapped = false;
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: widget.onCardTap,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 260),
+        curve: Curves.easeInOut,
+        width: 165,
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(18),
+          gradient: LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [
+              Colors.white.withOpacity(0.07),
+              Colors.white.withOpacity(0.04),
+            ],
+          ),
+          border: Border.all(color: Colors.white.withOpacity(0.10)),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.18),
+              blurRadius: 18,
+              offset: const Offset(0, 4),
+            ),
+          ],
+        ),
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(18),
+          child: Stack(
+            children: [
+              Positioned(
+                top: 0,
+                left: 0,
+                right: 0,
+                child: Container(
+                  height: 1,
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      colors: [
+                        Colors.transparent,
+                        widget.accentColor.withOpacity(0.35),
+                        Colors.transparent,
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+
+              Padding(
+                padding: const EdgeInsets.all(16),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      crossAxisAlignment: CrossAxisAlignment.center,
+                      children: [
+                        AnimatedSwitcher(
+                          duration: const Duration(milliseconds: 300),
+                          transitionBuilder: (child, animation) =>
+                              ScaleTransition(scale: animation, child: child),
+                          child: Text(
+                            widget.emoji,
+                            key: ValueKey(widget.emoji),
+                            style: GoogleFonts.dmSans(fontSize: 22),
+                          ),
+                        ),
+
+                        if (widget.isFemale)
+                          GestureDetector(
+                            onTap: () {
+                              setState(() {
+                                isArrowTapped = !isArrowTapped;
+                              });
+                              widget.onArrowTap();
+                            },
+                            behavior: HitTestBehavior.opaque,
+                            child: AnimatedContainer(
+                              duration: const Duration(milliseconds: 260),
+                              width: 22,
+                              height: 22,
+                              decoration: BoxDecoration(
+                                shape: BoxShape.circle,
+                                color: isArrowTapped
+                                    ? Colors.lightBlueAccent.withOpacity(0.15)
+                                    : widget.accentColor.withOpacity(0.15),
+                                border: Border.all(
+                                  color:isArrowTapped
+                                      ? Colors.lightBlueAccent.withOpacity(0.35)
+                                      : widget.accentColor.withOpacity(0.35),
+                                ),
+                              ),
+                              child: Center(
+                                child: AnimatedRotation(
+                                  turns: widget.isExpanded ? 0.5 : 0.0,
+                                  duration: const Duration(milliseconds: 260),
+                                  child: Icon(
+                                    Icons.arrow_forward_ios_rounded,
+                                    size: 10,
+                                    color: isArrowTapped
+                                        ? Colors.lightBlueAccent.withOpacity(0.85)
+                                        : widget.accentColor.withOpacity(0.85),
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ),
+                      ],
+                    ),
+
+                    const SizedBox(height: 8),
+
+                    AnimatedSwitcher(
+                      duration: const Duration(milliseconds: 250),
+                      child: Align(
+                        alignment: Alignment.centerLeft,
+                        child: Text(
+                          widget.title,
+                          key: ValueKey(widget.title),
+                          style: GoogleFonts.cormorantGaramond(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w600,
+                            color: ArriveTheme.text,
+                            height: 1.1,
+                          ),
+                        ),
+                      ),
+                    ),
+
+                    const SizedBox(height: 3),
+
+                    AnimatedSwitcher(
+                      duration: const Duration(milliseconds: 250),
+                      child: Align(
+                        alignment: Alignment.centerLeft,
+                        child: Text(
+                          widget.subtitle,
+                          key: ValueKey(widget.subtitle),
+                          style: GoogleFonts.dmSans(
+                            fontSize: 11,
+                            color: ArriveTheme.textMuted,
+                            height: 1.4,
+                            decoration: TextDecoration.none,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+// ── _EntryRow — search highlight support ─────────────────────────────────────
 
 class _EntryRow extends StatelessWidget {
   final String day;
@@ -915,6 +1215,8 @@ class _EntryRow extends StatelessWidget {
   final String title;
   final String preview;
   final String mood;
+  final String searchQuery;
+  final VoidCallback? onTap;
 
   const _EntryRow({
     required this.day,
@@ -922,6 +1224,8 @@ class _EntryRow extends StatelessWidget {
     required this.title,
     required this.preview,
     required this.mood,
+    this.searchQuery = '',
+    this.onTap,
   });
 
   @override
@@ -931,7 +1235,7 @@ class _EntryRow extends StatelessWidget {
       child: _GlassCard(
         borderRadius: 16,
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 13),
-        onTap: () {},
+        onTap: onTap,
         child: Row(
           children: [
             _GlassCard(
@@ -971,11 +1275,10 @@ class _EntryRow extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(
+                  _highlightText(
                     title,
                     maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: GoogleFonts.cormorantGaramond(
+                    baseStyle: GoogleFonts.cormorantGaramond(
                       fontSize: 15,
                       fontWeight: FontWeight.w600,
                       color: ArriveTheme.text,
@@ -983,11 +1286,10 @@ class _EntryRow extends StatelessWidget {
                     ),
                   ),
                   const SizedBox(height: 2),
-                  Text(
+                  _highlightText(
                     preview,
                     maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: GoogleFonts.dmSans(
+                    baseStyle: GoogleFonts.dmSans(
                       fontSize: 11,
                       color: ArriveTheme.textMuted,
                       decoration: TextDecoration.none,
@@ -1000,10 +1302,7 @@ class _EntryRow extends StatelessWidget {
             Column(
               crossAxisAlignment: CrossAxisAlignment.end,
               children: [
-                Text(
-                  mood,
-                  style: GoogleFonts.dmSans(fontSize: 16),
-                ),
+                Text(mood, style: GoogleFonts.dmSans(fontSize: 16)),
                 const SizedBox(height: 4),
                 Text(
                   'AI ✦',
@@ -1020,6 +1319,59 @@ class _EntryRow extends StatelessWidget {
           ],
         ),
       ),
+    );
+  }
+
+  // Highlight matching text in search results
+  Widget _highlightText(
+      String text, {
+        required TextStyle baseStyle,
+        int maxLines = 1,
+      }) {
+    if (searchQuery.isEmpty) {
+      return Text(
+        text,
+        maxLines: maxLines,
+        overflow: TextOverflow.ellipsis,
+        style: baseStyle,
+      );
+    }
+
+    final lowerText = text.toLowerCase();
+    final lowerQuery = searchQuery.toLowerCase();
+    final matchIndex = lowerText.indexOf(lowerQuery);
+
+    if (matchIndex == -1) {
+      return Text(
+        text,
+        maxLines: maxLines,
+        overflow: TextOverflow.ellipsis,
+        style: baseStyle,
+      );
+    }
+
+    final before = text.substring(0, matchIndex);
+    final match = text.substring(matchIndex, matchIndex + searchQuery.length);
+    final after = text.substring(matchIndex + searchQuery.length);
+
+    return Text.rich(
+      TextSpan(
+        style: baseStyle,
+        children: [
+          TextSpan(text: before),
+          TextSpan(
+            text: match,
+            style: baseStyle.copyWith(
+              color: ArriveTheme.green,
+              backgroundColor: ArriveTheme.green.withOpacity(0.12),
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+          TextSpan(text: after),
+        ],
+      ),
+      maxLines: maxLines,
+      overflow: TextOverflow.ellipsis,
     );
   }
 }
@@ -1052,10 +1404,7 @@ class _GlassCard extends StatelessWidget {
             Colors.white.withOpacity(0.04),
           ],
         ),
-        border: Border.all(
-          color: Colors.white.withOpacity(0.10),
-          width: 1,
-        ),
+        border: Border.all(color: Colors.white.withOpacity(0.10), width: 1),
         boxShadow: [
           BoxShadow(
             color: Colors.black.withOpacity(0.18),
@@ -1086,21 +1435,14 @@ class _GlassCard extends StatelessWidget {
                   ),
                 ),
               ),
-            Padding(
-              padding: padding,
-              child: child,
-            ),
+            Padding(padding: padding, child: child),
           ],
         ),
       ),
     );
 
     if (onTap == null) return card;
-
-    return GestureDetector(
-      onTap: onTap,
-      child: card,
-    );
+    return GestureDetector(onTap: onTap, child: card);
   }
 }
 
@@ -1130,10 +1472,7 @@ Widget _streakDot({required bool active, required bool now}) {
     child: Center(
       child: Text(
         now ? '✦' : '✓',
-        style: TextStyle(
-          fontSize: 11,
-          color: ArriveTheme.text,
-        ),
+        style: TextStyle(fontSize: 11, color: ArriveTheme.text),
       ),
     ),
   );

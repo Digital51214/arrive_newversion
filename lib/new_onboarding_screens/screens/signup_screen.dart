@@ -225,6 +225,7 @@ class _SignupScreenState extends State<SignupScreen> {
                                   color: ArriveTheme.textSoft,
                                   decoration: TextDecoration.underline,
                                 ),
+
                               ),
                               const TextSpan(text: ' and '),
                               TextSpan(

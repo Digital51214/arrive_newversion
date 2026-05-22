@@ -14,7 +14,10 @@ import '../constants.dart';
 import 'screen_saved.dart';
 
 class WriteScreen extends StatefulWidget {
-  const WriteScreen({super.key});
+  /// Optional: pre-fill the body text (e.g. coming from Quick Thought / Arrive)
+  final String? initialBody;
+
+  const WriteScreen({super.key, this.initialBody});
 
   @override
   State<WriteScreen> createState() => _WriteScreenState();
@@ -23,7 +26,7 @@ class WriteScreen extends StatefulWidget {
 class _WriteScreenState extends State<WriteScreen>
     with TickerProviderStateMixin {
   final _titleController = TextEditingController();
-  final _bodyController = TextEditingController();
+  late final TextEditingController _bodyController;
   final _emojiController = TextEditingController(text: '😊');
 
   bool _promptMode = true;
@@ -56,6 +59,24 @@ class _WriteScreenState extends State<WriteScreen>
   @override
   void initState() {
     super.initState();
+
+    // Pre-fill body if coming from Quick Thought
+    _bodyController = TextEditingController(
+      text: widget.initialBody ?? '',
+    );
+
+    // If pre-filled, switch to free-write mode and position cursor at end
+    if (widget.initialBody != null && widget.initialBody!.isNotEmpty) {
+      _promptMode = false;
+      _bodyController.selection = TextSelection.fromPosition(
+        TextPosition(offset: _bodyController.text.length),
+      );
+      _wordCount = _bodyController.text
+          .trim()
+          .split(RegExp(r'\s+'))
+          .where((w) => w.isNotEmpty)
+          .length;
+    }
 
     _blinkController = AnimationController(
       vsync: this,
@@ -120,30 +141,13 @@ class _WriteScreenState extends State<WriteScreen>
 
   String _todayDate() {
     final days = [
-      'Sunday',
-      'Monday',
-      'Tuesday',
-      'Wednesday',
-      'Thursday',
-      'Friday',
-      'Saturday',
+      'Sunday', 'Monday', 'Tuesday', 'Wednesday',
+      'Thursday', 'Friday', 'Saturday',
     ];
-
     final months = [
-      'January',
-      'February',
-      'March',
-      'April',
-      'May',
-      'June',
-      'July',
-      'August',
-      'September',
-      'October',
-      'November',
-      'December',
+      'January', 'February', 'March', 'April', 'May', 'June',
+      'July', 'August', 'September', 'October', 'November', 'December',
     ];
-
     final now = DateTime.now();
     return '${days[now.weekday % 7]}, ${months[now.month - 1]} ${now.day}';
   }
@@ -159,9 +163,7 @@ class _WriteScreenState extends State<WriteScreen>
           height: MediaQuery.of(context).size.height * 0.4,
           decoration: BoxDecoration(
             color: const Color(0xFF2D3650),
-            borderRadius: const BorderRadius.vertical(
-              top: Radius.circular(24),
-            ),
+            borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
             border: Border.all(color: kGlassBorder),
           ),
           child: EmojiPicker(
@@ -173,9 +175,7 @@ class _WriteScreenState extends State<WriteScreen>
             },
             config: const Config(
               height: 420,
-              bottomActionBarConfig: BottomActionBarConfig(
-                enabled: false,
-              ),
+              bottomActionBarConfig: BottomActionBarConfig(enabled: false),
               categoryViewConfig: CategoryViewConfig(
                 indicatorColor: kGreen,
                 iconColorSelected: kGreen,
@@ -189,14 +189,10 @@ class _WriteScreenState extends State<WriteScreen>
 
   Future<List<String>> _convertImagesToBase64() async {
     final List<String> base64Images = [];
-
     for (final photo in _photos) {
       final bytes = await File(photo.path).readAsBytes();
-      final base64String = base64Encode(bytes);
-
-      base64Images.add('data:image/png;base64,$base64String');
+      base64Images.add('data:image/png;base64,${base64Encode(bytes)}');
     }
-
     print('Converted Images Base64 Count: ${base64Images.length}');
     return base64Images;
   }
@@ -210,35 +206,25 @@ class _WriteScreenState extends State<WriteScreen>
       builder: (_) => _PhotoPickerSheet(
         onCamera: () async {
           Navigator.pop(context);
-
           final img = await _picker.pickImage(
             source: ImageSource.camera,
             imageQuality: 85,
           );
-
-          if (img != null && mounted) {
-            setState(() => _photos.add(img));
-          }
+          if (img != null && mounted) setState(() => _photos.add(img));
         },
         onGallery: () async {
           Navigator.pop(context);
-
           final remaining = 4 - _photos.length;
           final imgs = await _picker.pickMultiImage(imageQuality: 85);
-
           if (imgs.isNotEmpty && mounted) {
-            setState(() {
-              _photos.addAll(imgs.take(remaining));
-            });
+            setState(() => _photos.addAll(imgs.take(remaining)));
           }
         },
       ),
     );
   }
 
-  void _removePhoto(int index) {
-    setState(() => _photos.removeAt(index));
-  }
+  void _removePhoto(int index) => setState(() => _photos.removeAt(index));
 
   Future<void> _saveEntry() async {
     final body = _bodyController.text.trim();
@@ -246,15 +232,10 @@ class _WriteScreenState extends State<WriteScreen>
     if (body.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text(
-            'Write something first 💙',
-            style: dmSans(size: 13, color: kText),
-          ),
+          content: Text('Write something first 💙', style: dmSans(size: 13, color: kText)),
           backgroundColor: kGlass,
           behavior: SnackBarBehavior.floating,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(12),
-          ),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
         ),
       );
       return;
@@ -269,21 +250,14 @@ class _WriteScreenState extends State<WriteScreen>
 
       if (userId == 0) {
         if (!mounted) return;
-
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text(
-              'Session expired. Please login again.',
-              style: dmSans(size: 13, color: kText),
-            ),
+            content: Text('Session expired. Please login again.', style: dmSans(size: 13, color: kText)),
             backgroundColor: kGlass,
             behavior: SnackBarBehavior.floating,
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(12),
-            ),
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
           ),
         );
-
         return;
       }
 
@@ -334,8 +308,6 @@ class _WriteScreenState extends State<WriteScreen>
             0;
 
         print('Extracted Journal ID: $journalId');
-        print('Saved User ID From Session: $userId');
-        print('Full Save API Result: $result');
 
         if (journalId == 0) {
           ScaffoldMessenger.of(context).showSnackBar(
@@ -346,9 +318,7 @@ class _WriteScreenState extends State<WriteScreen>
               ),
               backgroundColor: kGlass,
               behavior: SnackBarBehavior.floating,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(12),
-              ),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
             ),
           );
           return;
@@ -357,16 +327,12 @@ class _WriteScreenState extends State<WriteScreen>
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(
-              result['message'] ??
-                  result['data']?['message'] ??
-                  'Journal saved successfully',
+              result['message'] ?? result['data']?['message'] ?? 'Journal saved successfully',
               style: dmSans(size: 13, color: kText),
             ),
             backgroundColor: kGlass,
             behavior: SnackBarBehavior.floating,
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(12),
-            ),
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
           ),
         );
 
@@ -390,48 +356,30 @@ class _WriteScreenState extends State<WriteScreen>
             ),
             backgroundColor: kGlass,
             behavior: SnackBarBehavior.floating,
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(12),
-            ),
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
           ),
         );
       }
     } catch (e) {
       print('Save Entry Error: $e');
-
       if (!mounted) return;
-
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text(
-            'Something went wrong. Please try again.',
-            style: dmSans(size: 13, color: kText),
-          ),
+          content: Text('Something went wrong. Please try again.', style: dmSans(size: 13, color: kText)),
           backgroundColor: kGlass,
           behavior: SnackBarBehavior.floating,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(12),
-          ),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
         ),
       );
     } finally {
-      if (mounted) {
-        setState(() => _isSaving = false);
-      }
+      if (mounted) setState(() => _isSaving = false);
     }
   }
 
   String _promptTextForCard() {
-    if (_isPromptLoading) {
-      return 'Loading today\'s prompt...';
-    }
-
+    if (_isPromptLoading) return 'Loading today\'s prompt...';
     final prompt = _todayPrompt?.trim();
-
-    if (prompt != null && prompt.isNotEmpty) {
-      return '"$prompt"';
-    }
-
+    if (prompt != null && prompt.isNotEmpty) return '"$prompt"';
     return '"$_fallbackPrompt"';
   }
 
@@ -442,18 +390,8 @@ class _WriteScreenState extends State<WriteScreen>
       backgroundColor: kBg,
       body: Stack(
         children: [
-          _orbWidget(
-            top: -60,
-            left: -60,
-            size: 280,
-            color: kGreen.withOpacity(0.22),
-          ),
-          _orbWidget(
-            bottom: 120,
-            right: -50,
-            size: 240,
-            color: kBlue.withOpacity(0.28),
-          ),
+          _orbWidget(top: -60, left: -60, size: 280, color: kGreen.withOpacity(0.22)),
+          _orbWidget(bottom: 120, right: -50, size: 240, color: kBlue.withOpacity(0.28)),
           _orbWidget(
             top: MediaQuery.of(context).size.height * 0.45,
             left: 40,
@@ -500,10 +438,7 @@ class _WriteScreenState extends State<WriteScreen>
                                 ],
                               ),
                               const SizedBox(height: 6),
-                              Text(
-                                _todayDate(),
-                                style: dmSans(size: 12, color: kTextMuted),
-                              ),
+                              Text(_todayDate(), style: dmSans(size: 12, color: kTextMuted)),
                               const SizedBox(height: 12),
                               Row(
                                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -517,8 +452,7 @@ class _WriteScreenState extends State<WriteScreen>
                                         style: cormorant(size: 24),
                                         cursorColor: kGreen,
                                         decoration: InputDecoration(
-                                          hintText:
-                                          'Give this moment a title…',
+                                          hintText: 'Give this moment a title…',
                                           hintStyle: cormorant(
                                             size: 24,
                                             color: kTextMuted,
@@ -526,8 +460,7 @@ class _WriteScreenState extends State<WriteScreen>
                                           ),
                                           border: InputBorder.none,
                                           counterText: '',
-                                          contentPadding:
-                                          const EdgeInsets.symmetric(
+                                          contentPadding: const EdgeInsets.symmetric(
                                             horizontal: 16,
                                             vertical: 14,
                                           ),
@@ -545,20 +478,13 @@ class _WriteScreenState extends State<WriteScreen>
                                           height: 54,
                                           decoration: BoxDecoration(
                                             color: kGlass,
-                                            borderRadius:
-                                            BorderRadius.circular(16),
-                                            border: Border.all(
-                                              color: kGlassBorder,
-                                            ),
+                                            borderRadius: BorderRadius.circular(16),
+                                            border: Border.all(color: kGlassBorder),
                                           ),
                                           child: Center(
                                             child: Text(
-                                              _emojiController.text.isEmpty
-                                                  ? '😊'
-                                                  : _emojiController.text,
-                                              style: const TextStyle(
-                                                fontSize: 25,
-                                              ),
+                                              _emojiController.text.isEmpty ? '😊' : _emojiController.text,
+                                              style: const TextStyle(fontSize: 25),
                                             ),
                                           ),
                                         ),
@@ -566,11 +492,7 @@ class _WriteScreenState extends State<WriteScreen>
                                       const SizedBox(height: 6),
                                       Text(
                                         'Add Emoji',
-                                        style: dmSans(
-                                          size: 10,
-                                          weight: FontWeight.w500,
-                                          color: kTextMuted,
-                                        ),
+                                        style: dmSans(size: 10, weight: FontWeight.w500, color: kTextMuted),
                                       ),
                                     ],
                                   ),
@@ -584,11 +506,7 @@ class _WriteScreenState extends State<WriteScreen>
                           height: 1,
                           decoration: BoxDecoration(
                             gradient: LinearGradient(
-                              colors: [
-                                Colors.transparent,
-                                kGlassBorder,
-                                Colors.transparent,
-                              ],
+                              colors: [Colors.transparent, kGlassBorder, Colors.transparent],
                             ),
                           ),
                         ),
@@ -612,20 +530,13 @@ class _WriteScreenState extends State<WriteScreen>
                                 children: [
                                   Text(
                                     '✦ TODAY\'S PROMPT',
-                                    style: dmSans(
-                                      size: 10,
-                                      weight: FontWeight.w500,
-                                      color: kGreen,
-                                    ).copyWith(letterSpacing: 1.0),
+                                    style: dmSans(size: 10, weight: FontWeight.w500, color: kGreen)
+                                        .copyWith(letterSpacing: 1.0),
                                   ),
                                   const SizedBox(height: 6),
                                   Text(
                                     _promptTextForCard(),
-                                    style: cormorant(
-                                      size: 17,
-                                      color: kTextSoft,
-                                      style: FontStyle.italic,
-                                    ),
+                                    style: cormorant(size: 17, color: kTextSoft, style: FontStyle.italic),
                                   ),
                                 ],
                               ),
@@ -641,19 +552,14 @@ class _WriteScreenState extends State<WriteScreen>
                                   controller: _bodyController,
                                   maxLines: null,
                                   minLines: 10,
-                                  style: dmSans(
-                                    size: 14,
-                                    color: kText,
-                                  ).copyWith(height: 1.8),
+                                  style: dmSans(size: 14, color: kText).copyWith(height: 1.8),
                                   cursorColor: kGreen,
                                   decoration: InputDecoration(
                                     hintText: _promptMode
                                         ? 'Respond to today\'s prompt… this space is only for you.'
                                         : 'Just say what\'s on your mind… no structure needed.',
-                                    hintStyle: dmSans(
-                                      size: 14,
-                                      color: kTextMuted,
-                                    ).copyWith(fontStyle: FontStyle.italic),
+                                    hintStyle: dmSans(size: 14, color: kTextMuted)
+                                        .copyWith(fontStyle: FontStyle.italic),
                                     border: InputBorder.none,
                                     contentPadding: const EdgeInsets.all(18),
                                   ),
@@ -679,28 +585,16 @@ class _WriteScreenState extends State<WriteScreen>
                               final idx = e.key;
                               final tag = e.value;
                               final sel = tag['sel'] as bool;
-
                               return GestureDetector(
-                                onTap: () {
-                                  setState(() {
-                                    _tags[idx]['sel'] = !sel;
-                                  });
-                                },
+                                onTap: () => setState(() => _tags[idx]['sel'] = !sel),
                                 child: AnimatedContainer(
                                   duration: const Duration(milliseconds: 180),
-                                  padding: const EdgeInsets.symmetric(
-                                    horizontal: 12,
-                                    vertical: 5,
-                                  ),
+                                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
                                   decoration: BoxDecoration(
-                                    color: sel
-                                        ? kGreen.withOpacity(0.1)
-                                        : kGlass,
+                                    color: sel ? kGreen.withOpacity(0.1) : kGlass,
                                     borderRadius: BorderRadius.circular(20),
                                     border: Border.all(
-                                      color: sel
-                                          ? kGreen.withOpacity(0.4)
-                                          : kGlassBorder,
+                                      color: sel ? kGreen.withOpacity(0.4) : kGlassBorder,
                                     ),
                                   ),
                                   child: Text(
@@ -735,11 +629,7 @@ class _WriteScreenState extends State<WriteScreen>
           if (_isSaving)
             Container(
               color: Colors.black.withOpacity(0.25),
-              child: const Center(
-                child: CircularProgressIndicator(
-                  color: kGreen,
-                ),
-              ),
+              child: const Center(child: CircularProgressIndicator(color: kGreen)),
             ),
         ],
       ),
@@ -754,23 +644,15 @@ class _WriteScreenState extends State<WriteScreen>
         children: [
           Row(
             children: [
-              const Center(
-                child: Text('📷', style: TextStyle(fontSize: 14)),
-              ),
+              const Text('📷', style: TextStyle(fontSize: 14)),
               const SizedBox(width: 10),
               Text(
                 'ADD PHOTOS',
-                style: dmSans(
-                  size: 11,
-                  weight: FontWeight.w600,
-                  color: kTextSoft,
-                ).copyWith(letterSpacing: 0.8),
+                style: dmSans(size: 11, weight: FontWeight.w600, color: kTextSoft)
+                    .copyWith(letterSpacing: 0.8),
               ),
               const SizedBox(width: 6),
-              Text(
-                'Optional · up to 4',
-                style: dmSans(size: 11, color: kTextMuted),
-              ),
+              Text('Optional · up to 4', style: dmSans(size: 11, color: kTextMuted)),
               const Spacer(),
               if (_photos.isNotEmpty)
                 GestureDetector(
@@ -791,12 +673,10 @@ class _WriteScreenState extends State<WriteScreen>
             child: ListView(
               scrollDirection: Axis.horizontal,
               children: [
-                ..._photos.asMap().entries.map((e) {
-                  return Padding(
-                    padding: const EdgeInsets.only(right: 9),
-                    child: _buildPhotoThumb(e.value, e.key),
-                  );
-                }),
+                ..._photos.asMap().entries.map((e) => Padding(
+                  padding: const EdgeInsets.only(right: 9),
+                  child: _buildPhotoThumb(e.value, e.key),
+                )),
                 if (_photos.length < 4)
                   GestureDetector(
                     onTap: _showPhotoOptions,
@@ -808,25 +688,9 @@ class _WriteScreenState extends State<WriteScreen>
                         child: Column(
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
-                            const Center(
-                              child: Text(
-                                '+',
-                                style: TextStyle(
-                                  fontSize: 20,
-                                  color: kTextMuted,
-                                  fontWeight: FontWeight.w300,
-                                ),
-                              ),
-                            ),
+                            const Text('+', style: TextStyle(fontSize: 20, color: kTextMuted, fontWeight: FontWeight.w300)),
                             const SizedBox(height: 5),
-                            Text(
-                              'Add',
-                              style: dmSans(
-                                size: 10,
-                                weight: FontWeight.w500,
-                                color: kTextMuted,
-                              ).copyWith(letterSpacing: 0.3),
-                            ),
+                            Text('Add', style: dmSans(size: 10, weight: FontWeight.w500, color: kTextMuted).copyWith(letterSpacing: 0.3)),
                           ],
                         ),
                       ),
@@ -861,12 +725,7 @@ class _WriteScreenState extends State<WriteScreen>
           ),
           child: ClipRRect(
             borderRadius: BorderRadius.circular(15),
-            child: Image.file(
-              File(photo.path),
-              width: 80,
-              height: 80,
-              fit: BoxFit.cover,
-            ),
+            child: Image.file(File(photo.path), width: 80, height: 80, fit: BoxFit.cover),
           ),
         ),
         Positioned(
@@ -883,14 +742,7 @@ class _WriteScreenState extends State<WriteScreen>
                 border: Border.all(color: kGlassBorder),
               ),
               child: const Center(
-                child: Text(
-                  '✕',
-                  style: TextStyle(
-                    fontSize: 10,
-                    color: kTextSoft,
-                    fontWeight: FontWeight.w500,
-                  ),
-                ),
+                child: Text('✕', style: TextStyle(fontSize: 10, color: kTextSoft, fontWeight: FontWeight.w500)),
               ),
             ),
           ),
@@ -901,7 +753,6 @@ class _WriteScreenState extends State<WriteScreen>
 
   Widget _toggleBtn(String label, bool isPrompt) {
     final active = isPrompt == _promptMode;
-
     return Expanded(
       child: GestureDetector(
         onTap: () => setState(() => _promptMode = isPrompt),
@@ -911,18 +762,12 @@ class _WriteScreenState extends State<WriteScreen>
           decoration: BoxDecoration(
             color: active ? kGreen.withOpacity(0.1) : kGlass,
             borderRadius: BorderRadius.circular(12),
-            border: Border.all(
-              color: active ? kGreen.withOpacity(0.4) : kGlassBorder,
-            ),
+            border: Border.all(color: active ? kGreen.withOpacity(0.4) : kGlassBorder),
           ),
           child: Text(
             label,
             textAlign: TextAlign.center,
-            style: dmSans(
-              size: 12,
-              weight: FontWeight.w500,
-              color: active ? kGreen : kTextMuted,
-            ),
+            style: dmSans(size: 12, weight: FontWeight.w500, color: active ? kGreen : kTextMuted),
           ),
         ),
       ),
@@ -931,18 +776,11 @@ class _WriteScreenState extends State<WriteScreen>
 }
 
 Widget _orbWidget({
-  double? top,
-  double? left,
-  double? right,
-  double? bottom,
-  required double size,
-  required Color color,
+  double? top, double? left, double? right, double? bottom,
+  required double size, required Color color,
 }) {
   return Positioned(
-    top: top,
-    left: left,
-    right: right,
-    bottom: bottom,
+    top: top, left: left, right: right, bottom: bottom,
     child: IgnorePointer(
       child: Container(
         width: size,
@@ -980,13 +818,9 @@ class _DashedBorderPainter extends CustomPainter {
     final metrics = path.computeMetrics().first;
 
     double dist = 0;
-
     while (dist < metrics.length) {
       final end = (dist + dashLen).clamp(0, metrics.length);
-      canvas.drawPath(
-        metrics.extractPath(dist, end.toDouble()),
-        paint,
-      );
+      canvas.drawPath(metrics.extractPath(dist, end.toDouble()), paint);
       dist += dashLen + gapLen;
     }
   }
@@ -999,10 +833,7 @@ class _PhotoPickerSheet extends StatelessWidget {
   final VoidCallback onCamera;
   final VoidCallback onGallery;
 
-  const _PhotoPickerSheet({
-    required this.onCamera,
-    required this.onGallery,
-  });
+  const _PhotoPickerSheet({required this.onCamera, required this.onGallery});
 
   @override
   Widget build(BuildContext context) {
@@ -1018,27 +849,17 @@ class _PhotoPickerSheet extends StatelessWidget {
           Center(
             child: Container(
               margin: const EdgeInsets.only(top: 12),
-              width: 36,
-              height: 4,
-              decoration: BoxDecoration(
-                color: kGlassBorder,
-                borderRadius: BorderRadius.circular(2),
-              ),
+              width: 36, height: 4,
+              decoration: BoxDecoration(color: kGlassBorder, borderRadius: BorderRadius.circular(2)),
             ),
           ),
           Padding(
             padding: const EdgeInsets.fromLTRB(20, 16, 20, 8),
-            child: Text(
-              'Add Photo',
-              style: cormorant(size: 22),
-            ),
+            child: Text('Add Photo', style: cormorant(size: 22)),
           ),
           Padding(
             padding: const EdgeInsets.fromLTRB(20, 0, 20, 20),
-            child: Text(
-              'Choose how you\'d like to add your moment',
-              style: dmSans(size: 13, color: kTextMuted),
-            ),
+            child: Text('Choose how you\'d like to add your moment', style: dmSans(size: 13, color: kTextMuted)),
           ),
           Container(height: 1, color: kGlassBorder.withOpacity(0.5)),
           GestureDetector(
@@ -1049,41 +870,24 @@ class _PhotoPickerSheet extends StatelessWidget {
               child: Row(
                 children: [
                   Container(
-                    width: 44,
-                    height: 44,
+                    width: 44, height: 44,
                     decoration: BoxDecoration(
                       color: kBlue.withOpacity(0.1),
                       borderRadius: BorderRadius.circular(12),
                       border: Border.all(color: kBlue.withOpacity(0.3)),
                     ),
-                    child: const Center(
-                      child: Text('📷', style: TextStyle(fontSize: 20)),
-                    ),
+                    child: const Center(child: Text('📷', style: TextStyle(fontSize: 20))),
                   ),
                   const SizedBox(width: 16),
                   Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(
-                        'Take a Photo',
-                        style: dmSans(
-                          size: 15,
-                          weight: FontWeight.w500,
-                          color: kText,
-                        ),
-                      ),
-                      Text(
-                        'Use your camera',
-                        style: dmSans(size: 12, color: kTextMuted),
-                      ),
+                      Text('Take a Photo', style: dmSans(size: 15, weight: FontWeight.w500, color: kText)),
+                      Text('Use your camera', style: dmSans(size: 12, color: kTextMuted)),
                     ],
                   ),
                   const Spacer(),
-                  const Icon(
-                    Icons.chevron_right,
-                    color: kTextMuted,
-                    size: 20,
-                  ),
+                  const Icon(Icons.chevron_right, color: kTextMuted, size: 20),
                 ],
               ),
             ),
@@ -1097,41 +901,24 @@ class _PhotoPickerSheet extends StatelessWidget {
               child: Row(
                 children: [
                   Container(
-                    width: 44,
-                    height: 44,
+                    width: 44, height: 44,
                     decoration: BoxDecoration(
                       color: kBlue.withOpacity(0.1),
                       borderRadius: BorderRadius.circular(12),
                       border: Border.all(color: kBlue.withOpacity(0.3)),
                     ),
-                    child: const Center(
-                      child: Text('🖼️', style: TextStyle(fontSize: 20)),
-                    ),
+                    child: const Center(child: Text('🖼️', style: TextStyle(fontSize: 20))),
                   ),
                   const SizedBox(width: 16),
                   Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(
-                        'Choose from Gallery',
-                        style: dmSans(
-                          size: 15,
-                          weight: FontWeight.w500,
-                          color: kText,
-                        ),
-                      ),
-                      Text(
-                        'Select multiple at once',
-                        style: dmSans(size: 12, color: kTextMuted),
-                      ),
+                      Text('Choose from Gallery', style: dmSans(size: 15, weight: FontWeight.w500, color: kText)),
+                      Text('Select multiple at once', style: dmSans(size: 12, color: kTextMuted)),
                     ],
                   ),
                   const Spacer(),
-                  const Icon(
-                    Icons.chevron_right,
-                    color: kTextMuted,
-                    size: 20,
-                  ),
+                  const Icon(Icons.chevron_right, color: kTextMuted, size: 20),
                 ],
               ),
             ),
@@ -1147,11 +934,7 @@ class _PhotoPickerSheet extends StatelessWidget {
                 child: Text(
                   'Cancel',
                   textAlign: TextAlign.center,
-                  style: dmSans(
-                    size: 14,
-                    weight: FontWeight.w500,
-                    color: kTextMuted,
-                  ),
+                  style: dmSans(size: 14, weight: FontWeight.w500, color: kTextMuted),
                 ),
               ),
             ),

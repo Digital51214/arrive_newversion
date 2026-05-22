@@ -9,15 +9,28 @@ import '../widgets/mode_chip.dart';
 import 'arrive_loading_screen.dart';
 
 class ArriveComposeScreen extends StatefulWidget {
-  const ArriveComposeScreen({super.key});
+  /// Optional: when coming from "Switch Mode", preserve the existing thought text
+  final String? preservedThought;
+
+  /// Optional: when coming from "Switch Mode", pre-select current mode
+  final String? preservedMode;
+
+  const ArriveComposeScreen({
+    super.key,
+    this.preservedThought,
+    this.preservedMode,
+  });
 
   @override
   State<ArriveComposeScreen> createState() => _ArriveComposeScreenState();
 }
 
 class _ArriveComposeScreenState extends State<ArriveComposeScreen> {
-  final TextEditingController controller = TextEditingController();
+  late final TextEditingController controller;
   String? selectedMode;
+
+  /// True when this screen was opened via "Switch Mode" (has preserved content)
+  bool get isSwitchModeFlow => widget.preservedThought != null;
 
   final starters = const [
     "I've been carrying something I haven't said out loud yet…",
@@ -36,6 +49,11 @@ class _ArriveComposeScreenState extends State<ArriveComposeScreen> {
   @override
   void initState() {
     super.initState();
+    controller = TextEditingController(text: widget.preservedThought ?? '');
+    // Pre-select mode only if switching — user should pick a *different* mode
+    // We don't pre-select so they're forced to actively choose
+    selectedMode = null;
+
     controller.addListener(() {
       setState(() {});
     });
@@ -53,7 +71,10 @@ class _ArriveComposeScreenState extends State<ArriveComposeScreen> {
     Navigator.push(
       context,
       MaterialPageRoute(
-        builder: (context) => const ArriveLoadingScreen(),
+        builder: (context) => ArriveLoadingScreen(
+          thought: controller.text.trim(),
+          mode: selectedMode!,
+        ),
       ),
     );
   }
@@ -88,7 +109,7 @@ class _ArriveComposeScreenState extends State<ArriveComposeScreen> {
                               ),
                               const SizedBox(width: 7),
                               Text(
-                                'Quick Thought',
+                                isSwitchModeFlow ? 'Switch Mode' : 'Quick Thought',
                                 style: GoogleFonts.dmSans(
                                   fontSize: 10,
                                   letterSpacing: 1.2,
@@ -102,7 +123,9 @@ class _ArriveComposeScreenState extends State<ArriveComposeScreen> {
                           ),
                           const SizedBox(height: 8),
                           Text(
-                            "What's on\nyour mind?",
+                            isSwitchModeFlow
+                                ? "Same thought,\ndifferent lens"
+                                : "What's on\nyour mind?",
                             style: GoogleFonts.cormorantGaramond(
                               fontSize: 28,
                               height: 1.25,
@@ -112,7 +135,9 @@ class _ArriveComposeScreenState extends State<ArriveComposeScreen> {
                           ),
                           const SizedBox(height: 6),
                           Text(
-                            'No entry needed. Just say it — pick how you want to be heard.',
+                            isSwitchModeFlow
+                                ? 'Your thought is kept. Pick a new mode and send again.'
+                                : 'No entry needed. Just say it — pick how you want to be heard.',
                             style: GoogleFonts.dmSans(
                               fontSize: 13,
                               height: 1.6,
@@ -285,70 +310,78 @@ class _ArriveComposeScreenState extends State<ArriveComposeScreen> {
                         ),
                       ),
 
-                    Padding(
-                      padding: const EdgeInsets.fromLTRB(22, 20, 22, 10),
-                      child: Text(
-                        'Not sure where to start?',
-                        style: GoogleFonts.dmSans(
-                          fontSize: 10,
-                          letterSpacing: 1.2,
-                          fontWeight: FontWeight.w500,
-                          color: ArriveColors.textMuted,
+                    // Only show starter prompts for fresh compose (not switch mode flow)
+                    if (!isSwitchModeFlow) ...[
+                      Padding(
+                        padding: const EdgeInsets.fromLTRB(22, 20, 22, 10),
+                        child: Text(
+                          'Not sure where to start?',
+                          style: GoogleFonts.dmSans(
+                            fontSize: 10,
+                            letterSpacing: 1.2,
+                            fontWeight: FontWeight.w500,
+                            color: ArriveColors.textMuted,
+                          ),
                         ),
                       ),
-                    ),
 
-                    Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 20),
-                      child: Column(
-                        children: starters
-                            .map(
-                              (text) => Padding(
-                            padding: const EdgeInsets.only(bottom: 8),
-                            child: GestureDetector(
-                              onTap: () {
-                                controller.text = text;
-                                controller.selection = TextSelection.fromPosition(
-                                  TextPosition(offset: controller.text.length),
-                                );
-                                setState(() {});
-                              },
-                              child: ClipRRect(
-                                borderRadius: BorderRadius.circular(14),
-                                child: BackdropFilter(
-                                  filter: ImageFilter.blur(sigmaX: 16, sigmaY: 16),
-                                  child: Container(
-                                    width: double.infinity,
-                                    padding: const EdgeInsets.symmetric(
-                                      horizontal: 16,
-                                      vertical: 13,
-                                    ),
-                                    decoration: BoxDecoration(
-                                      color: ArriveColors.glass,
-                                      borderRadius: BorderRadius.circular(14),
-                                      border: Border.all(
-                                        color: ArriveColors.glassBorder,
+                      Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 20),
+                        child: Column(
+                          children: starters
+                              .map(
+                                (text) => Padding(
+                              padding: const EdgeInsets.only(bottom: 8),
+                              child: GestureDetector(
+                                onTap: () {
+                                  controller.text = text;
+                                  controller.selection =
+                                      TextSelection.fromPosition(
+                                        TextPosition(
+                                            offset: controller.text.length),
+                                      );
+                                  setState(() {});
+                                },
+                                child: ClipRRect(
+                                  borderRadius: BorderRadius.circular(14),
+                                  child: BackdropFilter(
+                                    filter: ImageFilter.blur(
+                                        sigmaX: 16, sigmaY: 16),
+                                    child: Container(
+                                      width: double.infinity,
+                                      padding: const EdgeInsets.symmetric(
+                                        horizontal: 16,
+                                        vertical: 13,
                                       ),
-                                    ),
-                                    child: Text(
-                                      '"$text"',
-                                      style: GoogleFonts.cormorantGaramond(
-                                        fontSize: 15,
-                                        height: 1.4,
-                                        fontStyle: FontStyle.italic,
-                                        fontWeight: FontWeight.w400,
-                                        color: ArriveColors.textSoft,
+                                      decoration: BoxDecoration(
+                                        color: ArriveColors.glass,
+                                        borderRadius:
+                                        BorderRadius.circular(14),
+                                        border: Border.all(
+                                          color: ArriveColors.glassBorder,
+                                        ),
+                                      ),
+                                      child: Text(
+                                        '"$text"',
+                                        style:
+                                        GoogleFonts.cormorantGaramond(
+                                          fontSize: 15,
+                                          height: 1.4,
+                                          fontStyle: FontStyle.italic,
+                                          fontWeight: FontWeight.w400,
+                                          color: ArriveColors.textSoft,
+                                        ),
                                       ),
                                     ),
                                   ),
                                 ),
                               ),
                             ),
-                          ),
-                        )
-                            .toList(),
+                          )
+                              .toList(),
+                        ),
                       ),
-                    ),
+                    ],
                   ],
                 ),
               ),
