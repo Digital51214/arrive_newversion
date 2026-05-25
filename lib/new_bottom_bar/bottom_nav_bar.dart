@@ -151,9 +151,11 @@ class _ArriveLogoWidget extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return CustomPaint(
-      size: Size(20 * scaleFactor, 22 * scaleFactor),
-      painter: _ArriveLogoPainter(scaleFactor: scaleFactor),
+    return Image.asset(
+      'assets/images/only logo.png',
+      width: 25,
+      height: 25,
+      fit: BoxFit.contain,
     );
   }
 }

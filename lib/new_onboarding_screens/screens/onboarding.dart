@@ -5,14 +5,14 @@ import 'login_screen.dart';
 import 'signup_screen.dart';
 import 'walkthrough_screen.dart';
 import 'dart:math' as math;
-class SplashScreen2 extends StatefulWidget {
-  const SplashScreen2({super.key});
+class OnboardingScreen extends StatefulWidget {
+  const OnboardingScreen({super.key});
 
   @override
-  State<SplashScreen2> createState() => _SplashScreen2State();
+  State<OnboardingScreen> createState() => _OnboardingScreenState();
 }
 
-class _SplashScreen2State extends State<SplashScreen2>
+class _OnboardingScreenState extends State<OnboardingScreen>
     with SingleTickerProviderStateMixin {
   late AnimationController _breathe;
   late Animation<double> _scaleAnim;
@@ -68,14 +68,12 @@ class _SplashScreen2State extends State<SplashScreen2>
                         ),
                       ],
                     ),
-                    child: Padding(
-                      padding: EdgeInsets.only(left: MediaQuery.of(context).size.width * 0.035),
-                      child: Container(
-                        width: 100,
-                        height: 100,
-                        child: CustomPaint(
-                          painter: _ArriveSvgPainter(),
-                        ),
+                    child: Center(
+                      child: Image.asset(
+                        'assets/images/only logo.png',
+                        width: 70,
+                        height: 70,
+                        fit: BoxFit.cover,
                       ),
                     ),
                   ),
@@ -181,42 +179,43 @@ class _ArriveSvgPainter extends CustomPainter {
     canvas.translate(dx, dy); // center maintain
     canvas.scale(scaleX * shrink, scaleY * shrink);
 
+
     // Top leaf shape
-    final path1 = Path()
-      ..moveTo(50, 4)
-      ..cubicTo(33, 4, 20, 17, 20, 33)
-      ..cubicTo(20, 43, 26, 52, 35, 57)
-      ..lineTo(50, 65)
-      ..lineTo(65, 57)
-      ..cubicTo(74, 52, 80, 43, 80, 33)
-      ..cubicTo(80, 17, 67, 4, 50, 4);
-    canvas.drawPath(path1, paint);
+    // final path1 = Path()
+    //   ..moveTo(50, 4)
+    //   ..cubicTo(33, 4, 20, 17, 20, 33)
+    //   ..cubicTo(20, 43, 26, 52, 35, 57)
+    //   ..lineTo(50, 65)
+    //   ..lineTo(65, 57)
+    //   ..cubicTo(74, 52, 80, 43, 80, 33)
+    //   ..cubicTo(80, 17, 67, 4, 50, 4);
+    // canvas.drawPath(path1, paint);
 
     // Middle branching shape
-    final path2 = Path()
-      ..moveTo(20, 57)
-      ..cubicTo(8, 57, 1, 65, 1, 74)
-      ..cubicTo(1, 85, 9, 92, 20, 92)
-      ..cubicTo(30, 92, 39, 85, 41, 76)
-      ..lineTo(50, 65)
-      ..lineTo(59, 76)
-      ..cubicTo(61, 85, 70, 92, 80, 92)
-      ..cubicTo(91, 92, 99, 85, 99, 74)
-      ..cubicTo(99, 65, 92, 57, 80, 57)
-      ..cubicTo(70, 57, 61, 64, 59, 73)
-      ..lineTo(50, 84)
-      ..lineTo(41, 73)
-      ..cubicTo(39, 64, 30, 57, 20, 57);
-    canvas.drawPath(path2, paint);
+    // final path2 = Path()
+    //   ..moveTo(20, 57)
+    //   ..cubicTo(8, 57, 1, 65, 1, 74)
+    //   ..cubicTo(1, 85, 9, 92, 20, 92)
+    //   ..cubicTo(30, 92, 39, 85, 41, 76)
+    //   ..lineTo(50, 65)
+    //   ..lineTo(59, 76)
+    //   ..cubicTo(61, 85, 70, 92, 80, 92)
+    //   ..cubicTo(91, 92, 99, 85, 99, 74)
+    //   ..cubicTo(99, 65, 92, 57, 80, 57)
+    //   ..cubicTo(70, 57, 61, 64, 59, 73)
+    //   ..lineTo(50, 84)
+    //   ..lineTo(41, 73)
+    //   ..cubicTo(39, 64, 30, 57, 20, 57);
+    // canvas.drawPath(path2, paint);
 
     // Bottom root
-    final path3 = Path()
-      ..moveTo(35, 92)
-      ..cubicTo(28, 98, 28, 108, 38, 111)
-      ..lineTo(50, 113)
-      ..lineTo(62, 111)
-      ..cubicTo(72, 108, 72, 98, 65, 92);
-    canvas.drawPath(path3, paint);
+    // final path3 = Path()
+    //   ..moveTo(35, 92)
+    //   ..cubicTo(28, 98, 28, 108, 38, 111)
+    //   ..lineTo(50, 113)
+    //   ..lineTo(62, 111)
+    //   ..cubicTo(72, 108, 72, 98, 65, 92);
+    // canvas.drawPath(path3, paint);
 
     canvas.restore();
   }

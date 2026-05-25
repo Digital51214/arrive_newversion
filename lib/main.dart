@@ -1,4 +1,5 @@
-import 'package:arrive_newversion/new_onboarding_screens/screens/splash_screen.dart';
+import 'package:arrive_newversion/new_onboarding_screens/screens/onboarding.dart';
+import 'package:arrive_newversion/new_onboarding_screens/screens/splashscreen.dart';
 import 'package:flutter/material.dart';
 
 void main() {
@@ -18,7 +19,7 @@ class MyApp extends StatelessWidget {
 
         colorScheme: .fromSeed(seedColor: Colors.deepPurple),
       ),
-      home: SplashScreen2(),
+      home: SplashScreen(),
     );
   }
 }

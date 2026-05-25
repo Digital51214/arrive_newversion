@@ -198,7 +198,12 @@ class ArriveBottomNav extends StatelessWidget {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          CustomPaint(painter: _ArriveLogo(), size: const Size(20, 22)),
+          Image.asset(
+            'assets/images/only logo.png',
+            width: 50,
+            height: 50,
+            fit: BoxFit.cover,
+          ),
           const SizedBox(height: 4),
           Text('Arrive',
               style: dmSans(size: 10, weight: FontWeight.w500, color: kSage)),
@@ -276,8 +281,13 @@ class ArriveHeader extends StatelessWidget {
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
           Row(children: [
-            CustomPaint(painter: _ArriveLogo(), size: const Size(22, 24)),
-            const SizedBox(width: 9),
+            Image.asset(
+              'assets/images/only logo.png',
+
+            width: 25,height: 25,
+              fit: BoxFit.cover,
+            ),
+           SizedBox(width: 8),
             Text('Arrive', style: cormorant(size: 21)),
           ]),
           if (onBack != null)

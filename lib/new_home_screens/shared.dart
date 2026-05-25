@@ -108,67 +108,69 @@ class ArriveLogo extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return CustomPaint(
-      size: Size(size, size * 1.15),
-      painter: _ArriveLogoPainter(color: color),
+    return Image.asset(
+      'assets/images/only logo.png',
+      width: 25,
+      height: 25,
+      fit: BoxFit.cover,
     );
   }
 }
 
-class _ArriveLogoPainter extends CustomPainter {
-  final Color color;
-  const _ArriveLogoPainter({required this.color});
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    final paint = Paint()
-      ..color = color
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = size.width * 0.07
-      ..strokeCap = StrokeCap.round
-      ..strokeJoin = StrokeJoin.round;
-
-    final w = size.width;
-    final h = size.height;
-
-    final path1 = Path();
-    path1.moveTo(w * 0.5, h * 0.035);
-    path1.cubicTo(w * 0.33, h * 0.035, w * 0.2, h * 0.148, w * 0.2, h * 0.287);
-    path1.cubicTo(w * 0.2, h * 0.374, w * 0.26, h * 0.452, w * 0.35, h * 0.496);
-    path1.lineTo(w * 0.5, h * 0.565);
-    path1.lineTo(w * 0.65, h * 0.496);
-    path1.cubicTo(w * 0.74, h * 0.452, w * 0.8, h * 0.374, w * 0.8, h * 0.287);
-    path1.cubicTo(w * 0.8, h * 0.148, w * 0.67, h * 0.035, w * 0.5, h * 0.035);
-    canvas.drawPath(path1, paint);
-
-    final path2 = Path();
-    path2.moveTo(w * 0.2, h * 0.496);
-    path2.cubicTo(w * 0.08, h * 0.496, w * 0.01, h * 0.565, w * 0.01, h * 0.644);
-    path2.cubicTo(w * 0.01, h * 0.739, w * 0.09, h * 0.8, w * 0.2, h * 0.8);
-    path2.cubicTo(w * 0.3, h * 0.8, w * 0.39, h * 0.739, w * 0.41, h * 0.661);
-    path2.lineTo(w * 0.5, h * 0.565);
-    path2.lineTo(w * 0.59, h * 0.661);
-    path2.cubicTo(w * 0.61, h * 0.739, w * 0.7, h * 0.8, w * 0.8, h * 0.8);
-    path2.cubicTo(w * 0.91, h * 0.8, w * 0.99, h * 0.739, w * 0.99, h * 0.644);
-    path2.cubicTo(w * 0.99, h * 0.565, w * 0.92, h * 0.496, w * 0.8, h * 0.496);
-    path2.cubicTo(w * 0.7, h * 0.496, w * 0.61, h * 0.557, w * 0.59, h * 0.635);
-    path2.lineTo(w * 0.5, h * 0.73);
-    path2.lineTo(w * 0.41, h * 0.635);
-    path2.cubicTo(w * 0.39, h * 0.557, w * 0.3, h * 0.496, w * 0.2, h * 0.496);
-    canvas.drawPath(path2, paint);
-
-    final path3 = Path();
-    path3.moveTo(w * 0.35, h * 0.8);
-    path3.cubicTo(w * 0.28, h * 0.852, w * 0.28, h * 0.939, w * 0.38, h * 0.965);
-    path3.lineTo(w * 0.5, h * 0.983);
-    path3.lineTo(w * 0.62, h * 0.965);
-    path3.cubicTo(w * 0.72, h * 0.939, w * 0.72, h * 0.852, w * 0.65, h * 0.8);
-    canvas.drawPath(path3, paint);
-  }
-
-  @override
-  bool shouldRepaint(_ArriveLogoPainter old) => old.color != color;
-}
+// class _ArriveLogoPainter extends CustomPainter {
+//   final Color color;
+//   const _ArriveLogoPainter({required this.color});
+//
+//   @override
+//   void paint(Canvas canvas, Size size) {
+//     final paint = Paint()
+//       ..color = color
+//       ..style = PaintingStyle.stroke
+//       ..strokeWidth = size.width * 0.07
+//       ..strokeCap = StrokeCap.round
+//       ..strokeJoin = StrokeJoin.round;
+//
+//     final w = size.width;
+//     final h = size.height;
+//
+//     final path1 = Path();
+//     path1.moveTo(w * 0.5, h * 0.035);
+//     path1.cubicTo(w * 0.33, h * 0.035, w * 0.2, h * 0.148, w * 0.2, h * 0.287);
+//     path1.cubicTo(w * 0.2, h * 0.374, w * 0.26, h * 0.452, w * 0.35, h * 0.496);
+//     path1.lineTo(w * 0.5, h * 0.565);
+//     path1.lineTo(w * 0.65, h * 0.496);
+//     path1.cubicTo(w * 0.74, h * 0.452, w * 0.8, h * 0.374, w * 0.8, h * 0.287);
+//     path1.cubicTo(w * 0.8, h * 0.148, w * 0.67, h * 0.035, w * 0.5, h * 0.035);
+//     canvas.drawPath(path1, paint);
+//
+//     final path2 = Path();
+//     path2.moveTo(w * 0.2, h * 0.496);
+//     path2.cubicTo(w * 0.08, h * 0.496, w * 0.01, h * 0.565, w * 0.01, h * 0.644);
+//     path2.cubicTo(w * 0.01, h * 0.739, w * 0.09, h * 0.8, w * 0.2, h * 0.8);
+//     path2.cubicTo(w * 0.3, h * 0.8, w * 0.39, h * 0.739, w * 0.41, h * 0.661);
+//     path2.lineTo(w * 0.5, h * 0.565);
+//     path2.lineTo(w * 0.59, h * 0.661);
+//     path2.cubicTo(w * 0.61, h * 0.739, w * 0.7, h * 0.8, w * 0.8, h * 0.8);
+//     path2.cubicTo(w * 0.91, h * 0.8, w * 0.99, h * 0.739, w * 0.99, h * 0.644);
+//     path2.cubicTo(w * 0.99, h * 0.565, w * 0.92, h * 0.496, w * 0.8, h * 0.496);
+//     path2.cubicTo(w * 0.7, h * 0.496, w * 0.61, h * 0.557, w * 0.59, h * 0.635);
+//     path2.lineTo(w * 0.5, h * 0.73);
+//     path2.lineTo(w * 0.41, h * 0.635);
+//     path2.cubicTo(w * 0.39, h * 0.557, w * 0.3, h * 0.496, w * 0.2, h * 0.496);
+//     canvas.drawPath(path2, paint);
+//
+//     final path3 = Path();
+//     path3.moveTo(w * 0.35, h * 0.8);
+//     path3.cubicTo(w * 0.28, h * 0.852, w * 0.28, h * 0.939, w * 0.38, h * 0.965);
+//     path3.lineTo(w * 0.5, h * 0.983);
+//     path3.lineTo(w * 0.62, h * 0.965);
+//     path3.cubicTo(w * 0.72, h * 0.939, w * 0.72, h * 0.852, w * 0.65, h * 0.8);
+//     canvas.drawPath(path3, paint);
+//   }
+//
+//   @override
+//   bool shouldRepaint(_ArriveLogoPainter old) => old.color != color;
+// }
 
 // ─── FLOATING ORB PAINTER ─────────────────────────────────────────────────────
 class OrbsBackground extends StatefulWidget {
@@ -480,7 +482,7 @@ class _NavItemLogo extends StatelessWidget {
       mainAxisSize: MainAxisSize.min,
       children: [
         ArriveLogo(size: 20, color: kSage),
-        const SizedBox(height: 4),
+
         Text(
           'Arrive',
           style: GoogleFonts.cormorantGaramond(

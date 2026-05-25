@@ -198,7 +198,7 @@ class _WriteScreenState extends State<WriteScreen>
   }
 
   Future<void> _showPhotoOptions() async {
-    if (_photos.length >= 4) return;
+    // ✅ Photo limit removed — unlimited photos allowed
 
     await showModalBottomSheet(
       context: context,
@@ -214,10 +214,10 @@ class _WriteScreenState extends State<WriteScreen>
         },
         onGallery: () async {
           Navigator.pop(context);
-          final remaining = 4 - _photos.length;
+          // ✅ Removed take(remaining) — all selected images will be added
           final imgs = await _picker.pickMultiImage(imageQuality: 85);
           if (imgs.isNotEmpty && mounted) {
-            setState(() => _photos.addAll(imgs.take(remaining)));
+            setState(() => _photos.addAll(imgs));
           }
         },
       ),
@@ -652,7 +652,8 @@ class _WriteScreenState extends State<WriteScreen>
                     .copyWith(letterSpacing: 0.8),
               ),
               const SizedBox(width: 6),
-              Text('Optional · up to 4', style: dmSans(size: 11, color: kTextMuted)),
+              // ✅ "up to 4" removed
+              Text('Optional', style: dmSans(size: 11, color: kTextMuted)),
               const Spacer(),
               if (_photos.isNotEmpty)
                 GestureDetector(
@@ -677,25 +678,25 @@ class _WriteScreenState extends State<WriteScreen>
                   padding: const EdgeInsets.only(right: 9),
                   child: _buildPhotoThumb(e.value, e.key),
                 )),
-                if (_photos.length < 4)
-                  GestureDetector(
-                    onTap: _showPhotoOptions,
-                    child: SizedBox(
-                      width: 80,
-                      height: 80,
-                      child: CustomPaint(
-                        painter: _DashedBorderPainter(),
-                        child: Column(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            const Text('+', style: TextStyle(fontSize: 20, color: kTextMuted, fontWeight: FontWeight.w300)),
-                            const SizedBox(height: 5),
-                            Text('Add', style: dmSans(size: 10, weight: FontWeight.w500, color: kTextMuted).copyWith(letterSpacing: 0.3)),
-                          ],
-                        ),
+                // ✅ Add button always visible — no limit check
+                GestureDetector(
+                  onTap: _showPhotoOptions,
+                  child: SizedBox(
+                    width: 80,
+                    height: 80,
+                    child: CustomPaint(
+                      painter: _DashedBorderPainter(),
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          const Text('+', style: TextStyle(fontSize: 20, color: kTextMuted, fontWeight: FontWeight.w300)),
+                          const SizedBox(height: 5),
+                          Text('Add', style: dmSans(size: 10, weight: FontWeight.w500, color: kTextMuted).copyWith(letterSpacing: 0.3)),
+                        ],
                       ),
                     ),
                   ),
+                ),
               ],
             ),
           ),
@@ -703,7 +704,8 @@ class _WriteScreenState extends State<WriteScreen>
             Padding(
               padding: const EdgeInsets.only(top: 8),
               child: Text(
-                '${_photos.length}/4 photo${_photos.length != 1 ? 's' : ''} added',
+                // ✅ "/4" removed from counter
+                '${_photos.length} photo${_photos.length != 1 ? 's' : ''} added',
                 style: dmSans(size: 11, color: kGreen.withOpacity(0.8)),
               ),
             ),
