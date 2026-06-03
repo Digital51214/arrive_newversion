@@ -3,6 +3,7 @@ import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
+import '../../new_service_screens/session_manager.dart';
 import '../theme/arrive_colors.dart';
 
 class PostComposerModal {
@@ -20,6 +21,11 @@ class PostComposerModal {
     bool isAnonymous = false;
     bool isSubmitting = false;
 
+    // ── Session emoji ek baar fetch karo ──
+    final String sessionEmoji = await SessionManager.getEmoji().then(
+          (e) => (e.trim().isNotEmpty) ? e.trim() : '🌿',
+    );
+
     Future<void> submitPost({
       required BuildContext sheetContext,
       required void Function(void Function()) setSheetState,
@@ -33,9 +39,7 @@ class PostComposerModal {
 
       if (content.isEmpty) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Please write something first'),
-          ),
+          const SnackBar(content: Text('Please write something first')),
         );
         return;
       }
@@ -49,9 +53,7 @@ class PostComposerModal {
       print('FINAL TYPE    : $finalType');
       print('==========================================');
 
-      setSheetState(() {
-        isSubmitting = true;
-      });
+      setSheetState(() => isSubmitting = true);
 
       try {
         await onSubmit(
@@ -70,18 +72,12 @@ class PostComposerModal {
 
         if (context.mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text(
-                e.toString().replaceAll('Exception: ', ''),
-              ),
-            ),
+            SnackBar(content: Text(e.toString().replaceAll('Exception: ', ''))),
           );
         }
       } finally {
         try {
-          setSheetState(() {
-            isSubmitting = false;
-          });
+          setSheetState(() => isSubmitting = false);
         } catch (e) {
           print('COMPOSER SET STATE AFTER CLOSE SKIPPED: $e');
         }
@@ -97,34 +93,22 @@ class PostComposerModal {
       builder: (sheetContext) {
         return StatefulBuilder(
           builder: (sheetContext, setSheetState) {
-            // ── FIX 1: keyboard open hone par overflow na ho ──
-            final double bottomInset =
-                MediaQuery.of(sheetContext).viewInsets.bottom;
+            final double bottomInset = MediaQuery.of(sheetContext).viewInsets.bottom;
 
             return SingleChildScrollView(
               physics: const ClampingScrollPhysics(),
               child: Padding(
-                padding: EdgeInsets.only(
-                  left: 14,
-                  right: 14,
-                  bottom: bottomInset + 14,
-                ),
+                padding: EdgeInsets.only(left: 14, right: 14, bottom: bottomInset + 14),
                 child: ClipRRect(
                   borderRadius: BorderRadius.circular(30),
                   child: BackdropFilter(
-                    filter: ImageFilter.blur(
-                      sigmaX: 22,
-                      sigmaY: 22,
-                    ),
+                    filter: ImageFilter.blur(sigmaX: 22, sigmaY: 22),
                     child: Container(
                       padding: const EdgeInsets.fromLTRB(18, 14, 18, 18),
                       decoration: BoxDecoration(
                         color: const Color(0xFF1F2422).withOpacity(0.96),
                         borderRadius: BorderRadius.circular(30),
-                        border: Border.all(
-                          color: ArriveColors.glassBorder,
-                          width: 1,
-                        ),
+                        border: Border.all(color: ArriveColors.glassBorder, width: 1),
                         boxShadow: [
                           BoxShadow(
                             color: Colors.black.withOpacity(0.38),
@@ -142,6 +126,7 @@ class PostComposerModal {
                             mainAxisSize: MainAxisSize.min,
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
+                              // Drag handle
                               Center(
                                 child: Container(
                                   width: 44,
@@ -158,6 +143,7 @@ class PostComposerModal {
                               Row(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
+                                  // ── Session emoji avatar ──
                                   Container(
                                     width: 38,
                                     height: 38,
@@ -175,10 +161,10 @@ class PostComposerModal {
                                         color: ArriveColors.pink.withOpacity(0.35),
                                       ),
                                     ),
-                                    child: const Center(
+                                    child: Center(
                                       child: Text(
-                                        '🌿',
-                                        style: TextStyle(fontSize: 17),
+                                        sessionEmoji,
+                                        style: const TextStyle(fontSize: 17),
                                       ),
                                     ),
                                   ),
@@ -187,8 +173,7 @@ class PostComposerModal {
 
                                   Expanded(
                                     child: Column(
-                                      crossAxisAlignment:
-                                      CrossAxisAlignment.start,
+                                      crossAxisAlignment: CrossAxisAlignment.start,
                                       children: [
                                         Text(
                                           'Share with community',
@@ -218,9 +203,7 @@ class PostComposerModal {
                                         ? null
                                         : () {
                                       print('COMPOSER CLOSE TAPPED');
-
-                                      if (Navigator.of(sheetContext)
-                                          .canPop()) {
+                                      if (Navigator.of(sheetContext).canPop()) {
                                         Navigator.of(sheetContext).pop();
                                       }
                                     },
@@ -230,9 +213,7 @@ class PostComposerModal {
                                       decoration: BoxDecoration(
                                         color: Colors.black.withOpacity(0.18),
                                         shape: BoxShape.circle,
-                                        border: Border.all(
-                                          color: ArriveColors.glassBorder,
-                                        ),
+                                        border: Border.all(color: ArriveColors.glassBorder),
                                       ),
                                       child: Icon(
                                         Icons.close_rounded,
@@ -246,6 +227,7 @@ class PostComposerModal {
 
                               const SizedBox(height: 16),
 
+                              // ── Text field ──
                               Container(
                                 padding: const EdgeInsets.symmetric(
                                   horizontal: 13,
@@ -254,9 +236,7 @@ class PostComposerModal {
                                 decoration: BoxDecoration(
                                   color: Colors.black.withOpacity(0.16),
                                   borderRadius: BorderRadius.circular(20),
-                                  border: Border.all(
-                                    color: ArriveColors.glassBorder,
-                                  ),
+                                  border: Border.all(color: ArriveColors.glassBorder),
                                 ),
                                 child: TextField(
                                   controller: contentController,
@@ -309,13 +289,8 @@ class PostComposerModal {
                                           selectedType: selectedType,
                                           isDisabled: isAnonymous,
                                           onTap: () {
-                                            setSheetState(() {
-                                              selectedType = 'thought';
-                                            });
-
-                                            print(
-                                              'COMPOSER TYPE SELECTED: thought',
-                                            );
+                                            setSheetState(() => selectedType = 'thought');
+                                            print('COMPOSER TYPE SELECTED: thought');
                                           },
                                         ),
                                       ),
@@ -327,13 +302,8 @@ class PostComposerModal {
                                           selectedType: selectedType,
                                           isDisabled: isAnonymous,
                                           onTap: () {
-                                            setSheetState(() {
-                                              selectedType = 'need_support';
-                                            });
-
-                                            print(
-                                              'COMPOSER TYPE SELECTED: need_support',
-                                            );
+                                            setSheetState(() => selectedType = 'need_support');
+                                            print('COMPOSER TYPE SELECTED: need_support');
                                           },
                                         ),
                                       ),
@@ -345,13 +315,8 @@ class PostComposerModal {
                                           selectedType: selectedType,
                                           isDisabled: isAnonymous,
                                           onTap: () {
-                                            setSheetState(() {
-                                              selectedType = 'share_win';
-                                            });
-
-                                            print(
-                                              'COMPOSER TYPE SELECTED: share_win',
-                                            );
+                                            setSheetState(() => selectedType = 'share_win');
+                                            print('COMPOSER TYPE SELECTED: share_win');
                                           },
                                         ),
                                       ),
@@ -375,26 +340,18 @@ class PostComposerModal {
 
                               const SizedBox(height: 14),
 
+                              // ── Anonymous toggle ──
                               GestureDetector(
                                 onTap: isSubmitting
                                     ? null
                                     : () {
                                   setSheetState(() {
                                     isAnonymous = !isAnonymous;
-
-                                    if (isAnonymous) {
-                                      selectedType = 'anonymous';
-                                    } else {
-                                      selectedType = 'thought';
-                                    }
+                                    selectedType = isAnonymous ? 'anonymous' : 'thought';
                                   });
 
-                                  print(
-                                    'COMPOSER ANONYMOUS TOGGLED: $isAnonymous',
-                                  );
-                                  print(
-                                    'COMPOSER TYPE NOW: $selectedType',
-                                  );
+                                  print('COMPOSER ANONYMOUS TOGGLED: $isAnonymous');
+                                  print('COMPOSER TYPE NOW: $selectedType');
                                 },
                                 child: AnimatedContainer(
                                   duration: const Duration(milliseconds: 200),
@@ -416,8 +373,7 @@ class PostComposerModal {
                                   child: Row(
                                     children: [
                                       AnimatedContainer(
-                                        duration:
-                                        const Duration(milliseconds: 200),
+                                        duration: const Duration(milliseconds: 200),
                                         width: 22,
                                         height: 22,
                                         decoration: BoxDecoration(
@@ -428,8 +384,7 @@ class PostComposerModal {
                                           border: Border.all(
                                             color: isAnonymous
                                                 ? ArriveColors.pink
-                                                : ArriveColors.textMuted
-                                                .withOpacity(0.45),
+                                                : ArriveColors.textMuted.withOpacity(0.45),
                                           ),
                                         ),
                                         child: isAnonymous
@@ -445,8 +400,7 @@ class PostComposerModal {
 
                                       Expanded(
                                         child: Column(
-                                          crossAxisAlignment:
-                                          CrossAxisAlignment.start,
+                                          crossAxisAlignment: CrossAxisAlignment.start,
                                           children: [
                                             Text(
                                               'Post anonymously',
@@ -472,7 +426,7 @@ class PostComposerModal {
                                       ),
 
                                       Text(
-                                        isAnonymous ? '🤍' : '🌷',
+                                        isAnonymous ? '🤍' : sessionEmoji,
                                         style: const TextStyle(fontSize: 18),
                                       ),
                                     ],
@@ -482,6 +436,7 @@ class PostComposerModal {
 
                               const SizedBox(height: 16),
 
+                              // ── Cancel / Submit buttons ──
                               Row(
                                 children: [
                                   Expanded(
@@ -490,9 +445,7 @@ class PostComposerModal {
                                           ? null
                                           : () {
                                         print('COMPOSER CANCEL TAPPED');
-
-                                        if (Navigator.of(sheetContext)
-                                            .canPop()) {
+                                        if (Navigator.of(sheetContext).canPop()) {
                                           Navigator.of(sheetContext).pop();
                                         }
                                       },
@@ -501,9 +454,7 @@ class PostComposerModal {
                                         decoration: BoxDecoration(
                                           color: Colors.black.withOpacity(0.16),
                                           borderRadius: BorderRadius.circular(18),
-                                          border: Border.all(
-                                            color: ArriveColors.glassBorder,
-                                          ),
+                                          border: Border.all(color: ArriveColors.glassBorder),
                                         ),
                                         child: Center(
                                           child: Text(
@@ -543,13 +494,11 @@ class PostComposerModal {
                                           ),
                                           borderRadius: BorderRadius.circular(18),
                                           border: Border.all(
-                                            color: ArriveColors.pink
-                                                .withOpacity(0.65),
+                                            color: ArriveColors.pink.withOpacity(0.65),
                                           ),
                                           boxShadow: [
                                             BoxShadow(
-                                              color: ArriveColors.pink
-                                                  .withOpacity(0.22),
+                                              color: ArriveColors.pink.withOpacity(0.22),
                                               blurRadius: 18,
                                               offset: const Offset(0, 7),
                                             ),
@@ -563,8 +512,7 @@ class PostComposerModal {
                                               const SizedBox(
                                                 width: 17,
                                                 height: 17,
-                                                child:
-                                                CircularProgressIndicator(
+                                                child: CircularProgressIndicator(
                                                   strokeWidth: 2,
                                                   color: Colors.white,
                                                 ),
@@ -574,8 +522,7 @@ class PostComposerModal {
                                                 'Posting...',
                                                 style: GoogleFonts.dmSans(
                                                   fontSize: 13.5,
-                                                  fontWeight:
-                                                  FontWeight.w600,
+                                                  fontWeight: FontWeight.w600,
                                                   color: Colors.white,
                                                 ),
                                               ),
@@ -591,13 +538,10 @@ class PostComposerModal {
                                               ),
                                               const SizedBox(width: 7),
                                               Text(
-                                                isAnonymous
-                                                    ? 'Post Anonymously'
-                                                    : 'Share Post',
+                                                isAnonymous ? 'Post Anonymously' : 'Share Post',
                                                 style: GoogleFonts.dmSans(
                                                   fontSize: 13.5,
-                                                  fontWeight:
-                                                  FontWeight.w600,
+                                                  fontWeight: FontWeight.w600,
                                                   color: Colors.white,
                                                 ),
                                               ),

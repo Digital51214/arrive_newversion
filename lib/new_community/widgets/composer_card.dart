@@ -53,50 +53,61 @@ class ComposerCard extends StatelessWidget {
                       children: [
                         Row(
                           children: [
-                            Container(
-                              width: 34, height: 34,
-                              decoration: BoxDecoration(
-                                gradient: const LinearGradient(
-                                  begin: Alignment.topLeft, end: Alignment.bottomRight,
-                                  colors: [Color(0x40D4A0B8), Color(0x3390B8E0)],
-                                ),
-                                shape: BoxShape.circle,
-                                border: Border.all(color: ArriveColors.glassBorder),
-                              ),
-                              child: const Center(child: Text('🌸', style: TextStyle(fontSize: 14))),
+                            // ── Session emoji avatar ──
+                            FutureBuilder<String>(
+                              future: SessionManager.getEmoji(),
+                              builder: (context, snapshot) {
+                                final emoji = (snapshot.data != null && snapshot.data!.trim().isNotEmpty)
+                                    ? snapshot.data!.trim()
+                                    : '🌸';
+                                return Container(
+                                  width: 34,
+                                  height: 34,
+                                  decoration: BoxDecoration(
+                                    gradient: const LinearGradient(
+                                      begin: Alignment.topLeft,
+                                      end: Alignment.bottomRight,
+                                      colors: [Color(0x40D4A0B8), Color(0x3390B8E0)],
+                                    ),
+                                    shape: BoxShape.circle,
+                                    border: Border.all(color: ArriveColors.glassBorder),
+                                  ),
+                                  child: Center(
+                                    child: Text(emoji, style: const TextStyle(fontSize: 14)),
+                                  ),
+                                );
+                              },
                             ),
                             const SizedBox(width: 11),
                             Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                // Dynamically load the first name from the session
                                 FutureBuilder<String>(
                                   future: SessionManager.getFirstName(),
                                   builder: (context, snapshot) {
                                     if (snapshot.connectionState == ConnectionState.waiting) {
-                                      return const CircularProgressIndicator(); // Show loading while fetching
-                                    } else if (snapshot.hasError) {
-                                      return Text(
-                                        'Error: ${snapshot.error}',
-                                        style: GoogleFonts.dmSans(fontSize: 13, fontWeight: FontWeight.w500, color: ArriveColors.text),
-                                      );
-                                    } else if (snapshot.hasData) {
-                                      return Text(
-                                        snapshot.data ?? 'User', // Display the first name if available
-                                        style: GoogleFonts.dmSans(fontSize: 13, fontWeight: FontWeight.w500, color: ArriveColors.text),
-                                      );
-                                    } else {
-                                      return Text(
-                                        'User', // Fallback if no data
-                                        style: GoogleFonts.dmSans(fontSize: 13, fontWeight: FontWeight.w500, color: ArriveColors.text),
+                                      return const SizedBox(
+                                        width: 16,
+                                        height: 16,
+                                        child: CircularProgressIndicator(strokeWidth: 1.5),
                                       );
                                     }
+                                    return Text(
+                                      snapshot.data?.isNotEmpty == true ? snapshot.data! : 'User',
+                                      style: GoogleFonts.dmSans(
+                                        fontSize: 13,
+                                        fontWeight: FontWeight.w500,
+                                        color: ArriveColors.text,
+                                      ),
+                                    );
                                   },
                                 ),
                                 Text(
                                   "What's on your heart today...",
                                   style: GoogleFonts.cormorantGaramond(
-                                    fontSize: 15, fontStyle: FontStyle.italic, color: ArriveColors.textMuted,
+                                    fontSize: 15,
+                                    fontStyle: FontStyle.italic,
+                                    color: ArriveColors.textMuted,
                                   ),
                                 ),
                               ],
@@ -146,7 +157,11 @@ class _Chip extends StatelessWidget {
           ),
           child: Text(
             label,
-            style: GoogleFonts.dmSans(fontSize: 11, fontWeight: FontWeight.w500, color: ArriveColors.textMuted),
+            style: GoogleFonts.dmSans(
+              fontSize: 11,
+              fontWeight: FontWeight.w500,
+              color: ArriveColors.textMuted,
+            ),
           ),
         ),
       ),

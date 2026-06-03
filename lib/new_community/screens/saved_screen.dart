@@ -4,7 +4,6 @@ import 'package:arrive_newversion/new_service_screens/community_list_saved_feeds
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
-
 import '../../new_service_screens/session_manager.dart';
 import '../models/post_model.dart';
 import '../theme/arrive_colors.dart';
@@ -309,7 +308,15 @@ class _SavedScreenState extends State<SavedScreen> {
     print('POST DATE   : ${data['post_created_at']}');
     print('AUTHOR      : ${data['author_name']}');
     print('CONTENT     : ${data['content']}');
+    print('EMOJI       : ${data['emoji']}');
     print('-----------------------------------');
+
+    // ── API se emoji lo, warna fallback ──
+    final String authorEmoji = isAnon
+        ? '🤍'
+        : (data['emoji']?.toString().trim().isNotEmpty == true
+        ? data['emoji'].toString().trim()
+        : '🌷');
 
     return PostModel(
       id: data['id']?.toString() ??
@@ -317,7 +324,7 @@ class _SavedScreenState extends State<SavedScreen> {
       authorName: isAnon
           ? 'Anonymous'
           : data['author_name']?.toString() ?? 'User',
-      authorEmoji: isAnon ? '🤍' : '🌷',
+      authorEmoji: authorEmoji,
       type: _mapPostType(apiType, isAnon),
       text: data['content']?.toString() ?? '',
       timeAgo: _formatTime(

@@ -43,31 +43,20 @@ class _PostCardState extends State<PostCard> {
 
   int _feelCount = 0;
 
+  // ── Session emoji ──
+  String _sessionEmoji = '🌸';
+
   final List<String> _emojis = [
-    '😊',
-    '🥹',
-    '💙',
-    '🩵',
-    '🤍',
-    '🌸',
-    '✨',
-    '🫶',
-    '🤗',
-    '😭',
-    '😌',
-    '🌿',
-    '💭',
-    '🕊️',
-    '🙏',
-    '🥰',
-    '💪',
-    '🌷',
+    '😊', '🥹', '💙', '🩵', '🤍', '🌸', '✨', '🫶',
+    '🤗', '😭', '😌', '🌿', '💭', '🕊️', '🙏', '🥰',
+    '💪', '🌷',
   ];
 
   @override
   void initState() {
     super.initState();
     _post = widget.post;
+    _feelCount = 0;
 
     print('========== POST CARD INIT ==========');
     print('POST ID       : ${_post.id}');
@@ -76,13 +65,19 @@ class _PostCardState extends State<PostCard> {
     print('EXPANDED      : ${widget.isRepliesExpanded}');
     print('===================================');
 
-    _feelCount = 0;
+    // ── Session emoji load karo ──
+    SessionManager.getEmoji().then((e) {
+      if (mounted) {
+        setState(() {
+          _sessionEmoji = (e.trim().isNotEmpty) ? e.trim() : '🌸';
+        });
+      }
+    });
   }
 
   @override
   void didUpdateWidget(PostCard oldWidget) {
     super.didUpdateWidget(oldWidget);
-
     _post = widget.post;
 
     print('========== POST CARD UPDATED ==========');
@@ -175,10 +170,7 @@ class _PostCardState extends State<PostCard> {
         : (_post.hugCount > 0 ? _post.hugCount - 1 : 0);
 
     setState(() {
-      _post = _copy(
-        isHugged: nextHugged,
-        hugCount: nextHugCount,
-      );
+      _post = _copy(isHugged: nextHugged, hugCount: nextHugCount);
     });
 
     widget.onChanged(_post);
@@ -203,26 +195,14 @@ class _PostCardState extends State<PostCard> {
       print('HUG API RESULT : $result');
 
       final reacted = _parseBool(result['reacted']);
-
-      final apiHugCount = int.tryParse(
-        result['hug_count']?.toString() ?? '',
-      ) ??
-          nextHugCount;
-
-      final apiFeelCount = int.tryParse(
-        result['feel_count']?.toString() ?? '',
-      ) ??
-          _feelCount;
+      final apiHugCount = int.tryParse(result['hug_count']?.toString() ?? '') ?? nextHugCount;
+      final apiFeelCount = int.tryParse(result['feel_count']?.toString() ?? '') ?? _feelCount;
 
       if (!mounted) return;
 
       setState(() {
         _feelCount = apiFeelCount;
-
-        _post = _copy(
-          isHugged: reacted,
-          hugCount: apiHugCount,
-        );
+        _post = _copy(isHugged: reacted, hugCount: apiHugCount);
       });
 
       widget.onChanged(_post);
@@ -241,16 +221,10 @@ class _PostCardState extends State<PostCard> {
       widget.onChanged(oldPost);
 
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            e.toString().replaceAll('Exception: ', ''),
-          ),
-        ),
+        SnackBar(content: Text(e.toString().replaceAll('Exception: ', ''))),
       );
     } finally {
-      if (mounted) {
-        setState(() => _isReactingHug = false);
-      }
+      if (mounted) setState(() => _isReactingHug = false);
     }
   }
 
@@ -272,10 +246,7 @@ class _PostCardState extends State<PostCard> {
 
     setState(() {
       _feelCount = nextFeelCount;
-
-      _post = _copy(
-        isFeelThis: nextFeel,
-      );
+      _post = _copy(isFeelThis: nextFeel);
     });
 
     widget.onChanged(_post);
@@ -300,26 +271,14 @@ class _PostCardState extends State<PostCard> {
       print('FEEL API RESULT : $result');
 
       final reacted = _parseBool(result['reacted']);
-
-      final apiFeelCount = int.tryParse(
-        result['feel_count']?.toString() ?? '',
-      ) ??
-          nextFeelCount;
-
-      final apiHugCount = int.tryParse(
-        result['hug_count']?.toString() ?? '',
-      ) ??
-          _post.hugCount;
+      final apiFeelCount = int.tryParse(result['feel_count']?.toString() ?? '') ?? nextFeelCount;
+      final apiHugCount = int.tryParse(result['hug_count']?.toString() ?? '') ?? _post.hugCount;
 
       if (!mounted) return;
 
       setState(() {
         _feelCount = apiFeelCount;
-
-        _post = _copy(
-          isFeelThis: reacted,
-          hugCount: apiHugCount,
-        );
+        _post = _copy(isFeelThis: reacted, hugCount: apiHugCount);
       });
 
       widget.onChanged(_post);
@@ -338,25 +297,17 @@ class _PostCardState extends State<PostCard> {
       widget.onChanged(oldPost);
 
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            e.toString().replaceAll('Exception: ', ''),
-          ),
-        ),
+        SnackBar(content: Text(e.toString().replaceAll('Exception: ', ''))),
       );
     } finally {
-      if (mounted) {
-        setState(() => _isReactingFeel = false);
-      }
+      if (mounted) setState(() => _isReactingFeel = false);
     }
   }
 
   bool _parseBool(dynamic value) {
     if (value == true) return true;
     if (value == false) return false;
-
     final s = value?.toString().toLowerCase().trim();
-
     return s == '1' || s == 'true' || s == 'yes';
   }
 
@@ -366,9 +317,7 @@ class _PostCardState extends State<PostCard> {
     print('OLD SAVED : ${_post.isSaved}');
 
     setState(() {
-      _post = _copy(
-        isSaved: !_post.isSaved,
-      );
+      _post = _copy(isSaved: !_post.isSaved);
     });
 
     print('NEW SAVED : ${_post.isSaved}');
@@ -383,10 +332,7 @@ class _PostCardState extends State<PostCard> {
 
     setState(() {
       _showReplyBox = !_showReplyBox;
-
-      if (!_showReplyBox) {
-        _showEmojiPicker = false;
-      }
+      if (!_showReplyBox) _showEmojiPicker = false;
     });
   }
 
@@ -396,14 +342,11 @@ class _PostCardState extends State<PostCard> {
     final position = selection.baseOffset < 0 ? text.length : selection.baseOffset;
 
     _replyController.text = text.replaceRange(position, position, emoji);
-    _replyController.selection = TextSelection.collapsed(
-      offset: position + emoji.length,
-    );
+    _replyController.selection = TextSelection.collapsed(offset: position + emoji.length);
   }
 
   void _sendReply() {
     final text = _replyController.text.trim();
-
     if (text.isEmpty) return;
 
     print('========== LOCAL SEND REPLY ==========');
@@ -411,18 +354,16 @@ class _PostCardState extends State<PostCard> {
     print('TEXT    : $text');
 
     setState(() {
+      // ── Session emoji use karo ──
       _post.replies.add(
         ReplyModel(
           authorName: 'You',
-          authorEmoji: '🩵',
+          authorEmoji: _sessionEmoji,
           text: text,
         ),
       );
 
-      _post = _copy(
-        replyCount: _post.replyCount + 1,
-      );
-
+      _post = _copy(replyCount: _post.replyCount + 1);
       _replyController.clear();
       _showEmojiPicker = false;
     });
@@ -481,7 +422,6 @@ class _PostCardState extends State<PostCard> {
               ),
               const SizedBox(width: 6),
             ],
-
             Text(
               '$count replies',
               style: GoogleFonts.dmSans(
@@ -492,9 +432,7 @@ class _PostCardState extends State<PostCard> {
                 fontWeight: FontWeight.w500,
               ),
             ),
-
             const SizedBox(width: 4),
-
             AnimatedRotation(
               duration: const Duration(milliseconds: 200),
               turns: widget.isRepliesExpanded ? 0.5 : 0,
@@ -513,9 +451,7 @@ class _PostCardState extends State<PostCard> {
   }
 
   Widget _buildApiRepliesList() {
-    if (!widget.isRepliesExpanded) {
-      return const SizedBox.shrink();
-    }
+    if (!widget.isRepliesExpanded) return const SizedBox.shrink();
 
     if (widget.isRepliesLoading) {
       return Container(
@@ -532,18 +468,12 @@ class _PostCardState extends State<PostCard> {
               SizedBox(
                 width: 22,
                 height: 22,
-                child: CircularProgressIndicator(
-                  strokeWidth: 2,
-                  color: ArriveColors.blue,
-                ),
+                child: CircularProgressIndicator(strokeWidth: 2, color: ArriveColors.blue),
               ),
               const SizedBox(height: 8),
               Text(
                 'Loading replies...',
-                style: GoogleFonts.dmSans(
-                  fontSize: 12,
-                  color: ArriveColors.textMuted,
-                ),
+                style: GoogleFonts.dmSans(fontSize: 12, color: ArriveColors.textMuted),
               ),
             ],
           ),
@@ -562,17 +492,11 @@ class _PostCardState extends State<PostCard> {
         ),
         child: Row(
           children: [
-            const Text(
-              '💭',
-              style: TextStyle(fontSize: 17),
-            ),
+            const Text('💭', style: TextStyle(fontSize: 17)),
             const SizedBox(width: 8),
             Text(
               'No replies yet.',
-              style: GoogleFonts.dmSans(
-                fontSize: 12,
-                color: ArriveColors.textMuted,
-              ),
+              style: GoogleFonts.dmSans(fontSize: 12, color: ArriveColors.textMuted),
             ),
           ],
         ),
@@ -584,16 +508,10 @@ class _PostCardState extends State<PostCard> {
       margin: const EdgeInsets.only(top: 12),
       padding: const EdgeInsets.only(top: 12),
       decoration: BoxDecoration(
-        border: Border(
-          top: BorderSide(
-            color: ArriveColors.glassBorder,
-          ),
-        ),
+        border: Border(top: BorderSide(color: ArriveColors.glassBorder)),
       ),
       child: Column(
-        children: widget.apiReplies
-            .map((reply) => _ReplyItem(reply: reply))
-            .toList(),
+        children: widget.apiReplies.map((reply) => _ReplyItem(reply: reply)).toList(),
       ),
     );
   }
@@ -621,15 +539,12 @@ class _PostCardState extends State<PostCard> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
+              // Top colored line
               Container(
                 height: 1,
                 decoration: BoxDecoration(
                   gradient: LinearGradient(
-                    colors: [
-                      Colors.transparent,
-                      _topBorderColor,
-                      Colors.transparent,
-                    ],
+                    colors: [Colors.transparent, _topBorderColor, Colors.transparent],
                   ),
                 ),
               ),
@@ -642,21 +557,22 @@ class _PostCardState extends State<PostCard> {
                     Row(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
+                        // ── Avatar: agar apna post hai toh session emoji, warna post emoji ──
                         Container(
                           width: 32,
                           height: 32,
                           decoration: BoxDecoration(
                             gradient: _avatarGradient,
                             shape: BoxShape.circle,
-                            border: Border.all(
-                              color: ArriveColors.glassBorder,
-                            ),
+                            border: Border.all(color: ArriveColors.glassBorder),
                           ),
                           child: Center(
                             child: Text(
                               _post.isAnonymous
                                   ? '🤍'
-                                  : (_post.authorEmoji ?? '🌸'),
+                                  : (_post.isOwn
+                                  ? _sessionEmoji
+                                  : (_post.authorEmoji ?? '🌸')),
                               style: const TextStyle(fontSize: 14),
                             ),
                           ),
@@ -701,10 +617,7 @@ class _PostCardState extends State<PostCard> {
                                 duration: const Duration(milliseconds: 200),
                                 child: const Padding(
                                   padding: EdgeInsets.all(4),
-                                  child: Text(
-                                    '🔖',
-                                    style: TextStyle(fontSize: 17),
-                                  ),
+                                  child: Text('🔖', style: TextStyle(fontSize: 17)),
                                 ),
                               ),
                             ),
@@ -719,21 +632,14 @@ class _PostCardState extends State<PostCard> {
                                   vertical: 5,
                                 ),
                                 decoration: BoxDecoration(
-                                  color:
-                                  ArriveColors.glassBorder.withOpacity(0.08),
+                                  color: ArriveColors.glassBorder.withOpacity(0.08),
                                   borderRadius: BorderRadius.circular(30),
-                                  border: Border.all(
-                                    color: const Color(0xFF8DBFAA),
-                                  ),
+                                  border: Border.all(color: const Color(0xFF8DBFAA)),
                                 ),
                                 child: Row(
                                   mainAxisSize: MainAxisSize.min,
                                   children: [
-                                    const Icon(
-                                      Icons.message,
-                                      size: 13,
-                                      color: Color(0xFF8DBFAA),
-                                    ),
+                                    const Icon(Icons.message, size: 13, color: Color(0xFF8DBFAA)),
                                     const SizedBox(width: 4),
                                     Text(
                                       'Add Replies',
@@ -843,9 +749,7 @@ class _PostCardState extends State<PostCard> {
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
       decoration: BoxDecoration(
         color: color.withOpacity(0.08),
-        border: Border.all(
-          color: color.withOpacity(0.3),
-        ),
+        border: Border.all(color: color.withOpacity(0.3)),
         borderRadius: BorderRadius.circular(20),
       ),
       child: Text(
@@ -872,15 +776,9 @@ class _PostCardState extends State<PostCard> {
         children: [
           GestureDetector(
             onTap: () {
-              setState(() {
-                _showEmojiPicker = !_showEmojiPicker;
-              });
+              setState(() => _showEmojiPicker = !_showEmojiPicker);
             },
-            child: Icon(
-              Icons.emoji_emotions_outlined,
-              size: 22,
-              color: ArriveColors.textMuted,
-            ),
+            child: Icon(Icons.emoji_emotions_outlined, size: 22, color: ArriveColors.textMuted),
           ),
 
           const SizedBox(width: 8),
@@ -891,16 +789,10 @@ class _PostCardState extends State<PostCard> {
               minLines: 1,
               maxLines: 4,
               cursorColor: ArriveColors.sage,
-              style: GoogleFonts.dmSans(
-                fontSize: 13,
-                color: ArriveColors.text,
-              ),
+              style: GoogleFonts.dmSans(fontSize: 13, color: ArriveColors.text),
               decoration: InputDecoration(
                 hintText: 'Type a reply...',
-                hintStyle: GoogleFonts.dmSans(
-                  fontSize: 13,
-                  color: ArriveColors.textMuted,
-                ),
+                hintStyle: GoogleFonts.dmSans(fontSize: 13, color: ArriveColors.textMuted),
                 border: InputBorder.none,
                 isDense: true,
               ),
@@ -917,15 +809,9 @@ class _PostCardState extends State<PostCard> {
               decoration: BoxDecoration(
                 color: ArriveColors.sage.withOpacity(0.22),
                 shape: BoxShape.circle,
-                border: Border.all(
-                  color: ArriveColors.sage.withOpacity(0.45),
-                ),
+                border: Border.all(color: ArriveColors.sage.withOpacity(0.45)),
               ),
-              child: const Icon(
-                Icons.send_rounded,
-                size: 17,
-                color: Color(0xFF8DBFAA),
-              ),
+              child: const Icon(Icons.send_rounded, size: 17, color: Color(0xFF8DBFAA)),
             ),
           ),
         ],
@@ -955,12 +841,7 @@ class _PostCardState extends State<PostCard> {
                 shape: BoxShape.circle,
                 border: Border.all(color: ArriveColors.glassBorder),
               ),
-              child: Center(
-                child: Text(
-                  emoji,
-                  style: const TextStyle(fontSize: 22),
-                ),
-              ),
+              child: Center(child: Text(emoji, style: const TextStyle(fontSize: 22))),
             ),
           );
         }).toList(),
@@ -969,6 +850,7 @@ class _PostCardState extends State<PostCard> {
   }
 }
 
+// ─── Reaction Button ──────────────────────────────────────────────────────────
 class _ReactionBtn extends StatelessWidget {
   final String label;
   final bool isActive;
@@ -997,13 +879,9 @@ class _ReactionBtn extends StatelessWidget {
           child: Container(
             padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 6),
             decoration: BoxDecoration(
-              color: isActive
-                  ? activeColor.withOpacity(0.12)
-                  : Colors.transparent,
+              color: isActive ? activeColor.withOpacity(0.12) : Colors.transparent,
               border: Border.all(
-                color: isActive
-                    ? activeColor.withOpacity(0.5)
-                    : ArriveColors.glassBorder,
+                color: isActive ? activeColor.withOpacity(0.5) : ArriveColors.glassBorder,
               ),
               borderRadius: BorderRadius.circular(20),
             ),
@@ -1022,12 +900,11 @@ class _ReactionBtn extends StatelessWidget {
   }
 }
 
+// ─── Reply Item ───────────────────────────────────────────────────────────────
 class _ReplyItem extends StatelessWidget {
   final ReplyModel reply;
 
-  const _ReplyItem({
-    required this.reply,
-  });
+  const _ReplyItem({required this.reply});
 
   @override
   Widget build(BuildContext context) {
@@ -1045,10 +922,7 @@ class _ReplyItem extends StatelessWidget {
               border: Border.all(color: ArriveColors.glassBorder),
             ),
             child: Center(
-              child: Text(
-                reply.authorEmoji,
-                style: const TextStyle(fontSize: 11),
-              ),
+              child: Text(reply.authorEmoji, style: const TextStyle(fontSize: 11)),
             ),
           ),
 
@@ -1073,9 +947,7 @@ class _ReplyItem extends StatelessWidget {
                       color: ArriveColors.text,
                     ),
                   ),
-
                   const SizedBox(height: 3),
-
                   Text(
                     reply.text,
                     style: GoogleFonts.cormorantGaramond(

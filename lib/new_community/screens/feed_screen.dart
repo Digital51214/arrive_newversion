@@ -69,7 +69,6 @@ class FeedPostsCache {
       if (index != -1) {
         list[index] = updatedPost;
         _cache[entry.key] = list;
-
         print('UPDATED IN CACHE KEY : ${entry.key}');
       }
     }
@@ -77,7 +76,6 @@ class FeedPostsCache {
     print('===========================================');
   }
 
-  // ── FIX 2: duplicate check karte hue prepend karo ──
   static void prependIfAbsent(String key, PostModel post) {
     if (!_cache.containsKey(key)) return;
     final list = List<PostModel>.from(_cache[key]!);
@@ -212,11 +210,7 @@ class _FeedScreenState extends State<FeedScreen> {
 
   Future<int> _getUserId() async {
     final user = await SessionManager.getUser();
-
-    return int.tryParse(
-      user?['id']?.toString() ?? '',
-    ) ??
-        0;
+    return int.tryParse(user?['id']?.toString() ?? '') ?? 0;
   }
 
   Future<Map<String, dynamic>> _buildAllBody({int page = 1}) async {
@@ -278,10 +272,7 @@ class _FeedScreenState extends State<FeedScreen> {
 
     if (_isAllFilter) {
       final body = await _buildAllBody(page: page);
-
-      return CommunityAllFeedsFilterService.fetchPosts(
-        body: body,
-      );
+      return CommunityAllFeedsFilterService.fetchPosts(body: body);
     }
 
     if (_filterIndex == 1) {
@@ -341,9 +332,7 @@ class _FeedScreenState extends State<FeedScreen> {
     print('CACHE KEY : $_cacheKey');
     print('FILTER    : ${_filterLabels[_filterIndex]}');
 
-    if (mounted) {
-      setState(() => _isRefreshing = true);
-    }
+    if (mounted) setState(() => _isRefreshing = true);
 
     try {
       final result = await _fetchPostsBySelectedFilter(page: 1);
@@ -351,20 +340,12 @@ class _FeedScreenState extends State<FeedScreen> {
       final paginationData = result['data'] as Map<String, dynamic>? ?? {};
       final rawList = paginationData['data'] as List<dynamic>? ?? [];
 
-      final int currentPage = int.tryParse(
-        paginationData['current_page']?.toString() ?? '1',
-      ) ??
-          1;
-
-      final int lastPage = int.tryParse(
-        paginationData['last_page']?.toString() ?? '1',
-      ) ??
-          1;
-
-      final int total = int.tryParse(
-        paginationData['total']?.toString() ?? '0',
-      ) ??
-          0;
+      final int currentPage =
+          int.tryParse(paginationData['current_page']?.toString() ?? '1') ?? 1;
+      final int lastPage =
+          int.tryParse(paginationData['last_page']?.toString() ?? '1') ?? 1;
+      final int total =
+          int.tryParse(paginationData['total']?.toString() ?? '0') ?? 0;
 
       print('POSTS RECEIVED : ${rawList.length}');
       print('TOTAL POSTS    : $total');
@@ -395,16 +376,12 @@ class _FeedScreenState extends State<FeedScreen> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text(
-              e.toString().replaceAll('Exception: ', ''),
-            ),
+            content: Text(e.toString().replaceAll('Exception: ', '')),
           ),
         );
       }
     } finally {
-      if (mounted) {
-        setState(() => _isRefreshing = false);
-      }
+      if (mounted) setState(() => _isRefreshing = false);
     }
   }
 
@@ -416,9 +393,7 @@ class _FeedScreenState extends State<FeedScreen> {
     print('---------- LOAD MORE START ----------');
     print('CACHE KEY : $_cacheKey');
 
-    if (mounted) {
-      setState(() => _isLoadingMore = true);
-    }
+    if (mounted) setState(() => _isLoadingMore = true);
 
     try {
       final int nextPage = FeedPostsCache.getPage(_cacheKey) + 1;
@@ -430,15 +405,12 @@ class _FeedScreenState extends State<FeedScreen> {
       final paginationData = result['data'] as Map<String, dynamic>? ?? {};
       final rawList = paginationData['data'] as List<dynamic>? ?? [];
 
-      final int currentPage = int.tryParse(
-        paginationData['current_page']?.toString() ?? '$nextPage',
-      ) ??
-          nextPage;
-
-      final int lastPage = int.tryParse(
-        paginationData['last_page']?.toString() ?? '$currentPage',
-      ) ??
-          currentPage;
+      final int currentPage =
+          int.tryParse(paginationData['current_page']?.toString() ?? '$nextPage') ??
+              nextPage;
+      final int lastPage =
+          int.tryParse(paginationData['last_page']?.toString() ?? '$currentPage') ??
+              currentPage;
 
       print('NEW POSTS RECEIVED : ${rawList.length}');
       print('CURRENT PAGE       : $currentPage');
@@ -449,10 +421,7 @@ class _FeedScreenState extends State<FeedScreen> {
           .map(_mapToModel)
           .toList();
 
-      final combinedPosts = <PostModel>[
-        ..._posts,
-        ...newPosts,
-      ];
+      final combinedPosts = <PostModel>[..._posts, ...newPosts];
 
       FeedPostsCache.set(_cacheKey, combinedPosts);
       FeedPostsCache.setPage(_cacheKey, currentPage);
@@ -467,16 +436,12 @@ class _FeedScreenState extends State<FeedScreen> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text(
-              e.toString().replaceAll('Exception: ', ''),
-            ),
+            content: Text(e.toString().replaceAll('Exception: ', '')),
           ),
         );
       }
     } finally {
-      if (mounted) {
-        setState(() => _isLoadingMore = false);
-      }
+      if (mounted) setState(() => _isLoadingMore = false);
     }
   }
 
@@ -520,14 +485,21 @@ class _FeedScreenState extends State<FeedScreen> {
     print('REPLIES   : ${item['reply_count']}');
     print('AUTHOR    : ${item['author_name']}');
     print('CONTENT   : ${item['content']}');
+    print('EMOJI     : ${item['emoji']}');
     print('------------------------------');
+
+    final String authorEmoji = isAnon
+        ? '🤍'
+        : (item['emoji']?.toString().trim().isNotEmpty == true
+        ? item['emoji'].toString().trim()
+        : '🌷');
 
     return PostModel(
       id: item['id']?.toString() ??
           DateTime.now().millisecondsSinceEpoch.toString(),
       authorName:
       isAnon ? 'Anonymous' : item['author_name']?.toString() ?? 'User',
-      authorEmoji: isAnon ? '🤍' : '🌷',
+      authorEmoji: authorEmoji,
       type: _mapPostType(apiType, isAnon),
       text: item['content']?.toString() ?? '',
       timeAgo: _formatDate(item['created_at']?.toString()),
@@ -549,9 +521,7 @@ class _FeedScreenState extends State<FeedScreen> {
   PostType _mapPostType(String type, bool isAnon) {
     final cleanType = type.trim().toLowerCase();
 
-    if (isAnon || cleanType == 'anonymous') {
-      return PostType.anonymous;
-    }
+    if (isAnon || cleanType == 'anonymous') return PostType.anonymous;
 
     switch (cleanType) {
       case 'need_support':
@@ -610,9 +580,7 @@ class _FeedScreenState extends State<FeedScreen> {
     FeedPostsCache.set(_cacheKey, list);
     FeedPostsCache.updatePostEverywhere(updated);
 
-    if (mounted) {
-      setState(() {});
-    }
+    if (mounted) setState(() {});
 
     if (saveChanged && updated.isSaved == true) {
       await _savePostToApi(
@@ -642,24 +610,14 @@ class _FeedScreenState extends State<FeedScreen> {
 
     try {
       final user = await SessionManager.getUser();
-
-      final int userId = int.tryParse(
-        user?['id']?.toString() ?? '',
-      ) ??
-          0;
-
+      final int userId = int.tryParse(user?['id']?.toString() ?? '') ?? 0;
       final int parsedPostId = int.tryParse(postId) ?? 0;
 
       print('USER ID        : $userId');
       print('PARSED POST ID : $parsedPostId');
 
-      if (userId == 0) {
-        throw Exception('User not found');
-      }
-
-      if (parsedPostId == 0) {
-        throw Exception('Invalid post id');
-      }
+      if (userId == 0) throw Exception('User not found');
+      if (parsedPostId == 0) throw Exception('Invalid post id');
 
       final result = await CommunitySavePostService.savePost(
         userId: userId,
@@ -677,32 +635,22 @@ class _FeedScreenState extends State<FeedScreen> {
         throw Exception(result['message']?.toString() ?? 'Unable to save post');
       }
 
-      final savedPost = _copyPostWithSaved(
-        optimisticPost,
-        isSaved: true,
-      );
-
+      final savedPost = _copyPostWithSaved(optimisticPost, isSaved: true);
       FeedPostsCache.updatePostEverywhere(savedPost);
 
-      if (mounted) {
-        setState(() {});
-      }
+      if (mounted) setState(() {});
 
       print('POST SAVED LOCALLY AND ICON SHOULD STAY BRIGHT');
       print('========== SAVE POST END ==========');
     } catch (e) {
       print('SAVE POST ERROR: $e');
-
       FeedPostsCache.updatePostEverywhere(oldPost);
 
       if (mounted) {
         setState(() {});
-
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text(
-              e.toString().replaceAll('Exception: ', ''),
-            ),
+            content: Text(e.toString().replaceAll('Exception: ', '')),
           ),
         );
       }
@@ -711,10 +659,7 @@ class _FeedScreenState extends State<FeedScreen> {
     }
   }
 
-  PostModel _copyPostWithSaved(
-      PostModel post, {
-        required bool isSaved,
-      }) {
+  PostModel _copyPostWithSaved(PostModel post, {required bool isSaved}) {
     return PostModel(
       id: post.id,
       authorName: post.authorName,
@@ -759,9 +704,7 @@ class _FeedScreenState extends State<FeedScreen> {
   bool _parseReplyBool(dynamic value) {
     if (value == true) return true;
     if (value == false) return false;
-
     final text = value?.toString().toLowerCase().trim();
-
     return text == '1' || text == 'true' || text == 'yes';
   }
 
@@ -777,10 +720,16 @@ class _FeedScreenState extends State<FeedScreen> {
     print('CREATED AT : ${item['created_at']}');
     print('-------------------------------');
 
+    final String replyEmoji = isAnon
+        ? '🤍'
+        : (item['emoji']?.toString().trim().isNotEmpty == true
+        ? item['emoji'].toString().trim()
+        : '🌷');
+
     return ReplyModel(
       authorName:
       isAnon ? 'Anonymous Mom' : item['author_name']?.toString() ?? 'User',
-      authorEmoji: isAnon ? '🤍' : '🌷',
+      authorEmoji: replyEmoji,
       text: item['content']?.toString() ?? '',
     );
   }
@@ -797,7 +746,6 @@ class _FeedScreenState extends State<FeedScreen> {
       setState(() {
         _expandedReplyPostIds.remove(postId);
       });
-
       print('REPLIES COLLAPSED FOR POST ID : $postId');
       print('====================================');
       return;
@@ -821,13 +769,8 @@ class _FeedScreenState extends State<FeedScreen> {
       print('FETCH REPLIES USER ID : $userId');
       print('FETCH REPLIES POST ID : $parsedPostId');
 
-      if (userId == 0) {
-        throw Exception('User not found');
-      }
-
-      if (parsedPostId == 0) {
-        throw Exception('Invalid post id');
-      }
+      if (userId == 0) throw Exception('User not found');
+      if (parsedPostId == 0) throw Exception('Invalid post id');
 
       final result = await AllCommunityPostRepliesService.fetchReplies(
         userId: userId,
@@ -861,9 +804,7 @@ class _FeedScreenState extends State<FeedScreen> {
         FeedPostsCache.set(_cacheKey, currentList);
       }
 
-      if (mounted) {
-        setState(() {});
-      }
+      if (mounted) setState(() {});
 
       print('REPLIES LOADED AND POST COUNT UPDATED');
       print('========== TOGGLE REPLIES END ==========');
@@ -877,9 +818,7 @@ class _FeedScreenState extends State<FeedScreen> {
 
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text(
-              e.toString().replaceAll('Exception: ', ''),
-            ),
+            content: Text(e.toString().replaceAll('Exception: ', '')),
           ),
         );
       }
@@ -940,15 +879,13 @@ class _FeedScreenState extends State<FeedScreen> {
 
     try {
       final user = await SessionManager.getUser();
+      final int userId = int.tryParse(user?['id']?.toString() ?? '') ?? 0;
 
-      final int userId = int.tryParse(
-        user?['id']?.toString() ?? '',
-      ) ??
-          0;
+      if (userId == 0) throw Exception('User not found');
 
-      if (userId == 0) {
-        throw Exception('User not found');
-      }
+      final String sessionEmoji = await SessionManager.getEmoji().then(
+            (e) => (e.trim().isNotEmpty) ? e.trim() : '🌿',
+      );
 
       final result = await CommunityPostService.createPost(
         userId: userId,
@@ -973,13 +910,15 @@ class _FeedScreenState extends State<FeedScreen> {
           data['is_anonymous']?.toString() == '1' ||
           data['is_anonymous']?.toString().toLowerCase() == 'true';
 
+      final String newPostEmoji = postIsAnonymous ? '🤍' : sessionEmoji;
+
       final newPost = PostModel(
         id: data['id']?.toString() ??
             DateTime.now().millisecondsSinceEpoch.toString(),
         authorName: postIsAnonymous
             ? 'Anonymous'
             : data['author_name']?.toString() ?? authorName,
-        authorEmoji: postIsAnonymous ? '🤍' : '🌿',
+        authorEmoji: newPostEmoji,
         type: _mapPostType(apiType, postIsAnonymous),
         text: data['content']?.toString() ?? content,
         timeAgo: 'Just now',
@@ -997,7 +936,6 @@ class _FeedScreenState extends State<FeedScreen> {
         isAnonymous: postIsAnonymous,
       );
 
-      // ── FIX 2: prependIfAbsent use karo — duplicate kabhi nahi hoga ──
       final String allKey =
           '${widget.selectedMode}__${_communityType}__filter_0';
       final String thoughtsKey =
@@ -1009,7 +947,6 @@ class _FeedScreenState extends State<FeedScreen> {
       final String anonymousKey =
           '${widget.selectedMode}__${_communityType}__filter_4';
 
-      // Har relevant cache mein safely prepend karo
       FeedPostsCache.prependIfAbsent(allKey, newPost);
 
       if (postIsAnonymous || newPost.type == PostType.anonymous) {
@@ -1022,8 +959,6 @@ class _FeedScreenState extends State<FeedScreen> {
         FeedPostsCache.prependIfAbsent(winsKey, newPost);
       }
 
-      // Agar current cache key alag hai (koi specific filter active),
-      // tab bhi us mein insert karo — but sirf agar post us filter se match kare
       if (_cacheKey != allKey &&
           _matchesCurrentFilter(newPost.type, postIsAnonymous)) {
         FeedPostsCache.prependIfAbsent(_cacheKey, newPost);
@@ -1034,6 +969,7 @@ class _FeedScreenState extends State<FeedScreen> {
       print('POST CREATED AND ADDED TO CORRECT FILTER CACHE');
       print('POST TYPE       : ${newPost.type}');
       print('POST ANONYMOUS  : ${newPost.isAnonymous}');
+      print('POST EMOJI      : $newPostEmoji');
       print('ALL KEY         : $allKey');
       print('ANONYMOUS KEY   : $anonymousKey');
       print('---------- CREATE POST END ----------');
@@ -1050,15 +986,11 @@ class _FeedScreenState extends State<FeedScreen> {
 
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text(
-            e.toString().replaceAll('Exception: ', ''),
-          ),
+          content: Text(e.toString().replaceAll('Exception: ', '')),
         ),
       );
     } finally {
-      if (mounted) {
-        setState(() => _isCreatingPost = false);
-      }
+      if (mounted) setState(() => _isCreatingPost = false);
     }
   }
 
@@ -1082,6 +1014,12 @@ class _FeedScreenState extends State<FeedScreen> {
 
     bool isAnonymous = false;
     bool isSubmitting = false;
+
+    // ── Session emoji fetch karo sheet open hote waqt ──
+    String sessionEmoji = '🌷';
+    SessionManager.getEmoji().then((e) {
+      if (e.trim().isNotEmpty) sessionEmoji = e.trim();
+    });
 
     print('========== OPEN REPLY SHEET ==========');
     print('POST ID : ${post.id}');
@@ -1112,16 +1050,12 @@ class _FeedScreenState extends State<FeedScreen> {
 
               if (text.isEmpty) {
                 ScaffoldMessenger.of(this.context).showSnackBar(
-                  const SnackBar(
-                    content: Text('Please write a reply first'),
-                  ),
+                  const SnackBar(content: Text('Please write a reply first')),
                 );
                 return;
               }
 
-              setSheetState(() {
-                isSubmitting = true;
-              });
+              setSheetState(() => isSubmitting = true);
 
               try {
                 await _addReplyToPost(
@@ -1142,23 +1076,19 @@ class _FeedScreenState extends State<FeedScreen> {
                   ScaffoldMessenger.of(this.context).showSnackBar(
                     SnackBar(
                       content: Text(
-                        e.toString().replaceAll('Exception: ', ''),
-                      ),
+                          e.toString().replaceAll('Exception: ', '')),
                     ),
                   );
                 }
               } finally {
                 try {
-                  setSheetState(() {
-                    isSubmitting = false;
-                  });
+                  setSheetState(() => isSubmitting = false);
                 } catch (e) {
                   print('SHEET SET STATE AFTER CLOSE SKIPPED: $e');
                 }
               }
             }
 
-            // ── FIX 1 (reply sheet): same keyboard fix ──
             final double bottomInset =
                 MediaQuery.of(sheetContext).viewInsets.bottom;
 
@@ -1173,10 +1103,7 @@ class _FeedScreenState extends State<FeedScreen> {
                 child: ClipRRect(
                   borderRadius: BorderRadius.circular(30),
                   child: BackdropFilter(
-                    filter: ImageFilter.blur(
-                      sigmaX: 22,
-                      sigmaY: 22,
-                    ),
+                    filter: ImageFilter.blur(sigmaX: 22, sigmaY: 22),
                     child: Container(
                       padding: const EdgeInsets.fromLTRB(18, 14, 18, 18),
                       decoration: BoxDecoration(
@@ -1249,7 +1176,8 @@ class _FeedScreenState extends State<FeedScreen> {
                                       children: [
                                         Text(
                                           'Add a reply',
-                                          style: GoogleFonts.cormorantGaramond(
+                                          style:
+                                          GoogleFonts.cormorantGaramond(
                                             fontSize: 25,
                                             fontWeight: FontWeight.w400,
                                             color: ArriveColors.text,
@@ -1274,7 +1202,6 @@ class _FeedScreenState extends State<FeedScreen> {
                                         ? null
                                         : () {
                                       print('REPLY SHEET CLOSE TAPPED');
-
                                       if (Navigator.of(sheetContext)
                                           .canPop()) {
                                         Navigator.of(sheetContext).pop();
@@ -1307,8 +1234,7 @@ class _FeedScreenState extends State<FeedScreen> {
                                   color: Colors.black.withOpacity(0.16),
                                   borderRadius: BorderRadius.circular(18),
                                   border: Border.all(
-                                    color: ArriveColors.glassBorder,
-                                  ),
+                                      color: ArriveColors.glassBorder),
                                 ),
                                 child: Text(
                                   post.text,
@@ -1332,8 +1258,7 @@ class _FeedScreenState extends State<FeedScreen> {
                                   color: Colors.black.withOpacity(0.16),
                                   borderRadius: BorderRadius.circular(20),
                                   border: Border.all(
-                                    color: ArriveColors.glassBorder,
-                                  ),
+                                      color: ArriveColors.glassBorder),
                                 ),
                                 child: TextField(
                                   controller: replyController,
@@ -1365,10 +1290,8 @@ class _FeedScreenState extends State<FeedScreen> {
                                   setSheetState(() {
                                     isAnonymous = !isAnonymous;
                                   });
-
                                   print(
-                                    'REPLY ANONYMOUS CHANGED : $isAnonymous',
-                                  );
+                                      'REPLY ANONYMOUS CHANGED : $isAnonymous');
                                 },
                                 child: AnimatedContainer(
                                   duration: const Duration(milliseconds: 200),
@@ -1440,9 +1363,11 @@ class _FeedScreenState extends State<FeedScreen> {
                                           ],
                                         ),
                                       ),
+                                      // ── CHANGE: 🌷 ki jagah sessionEmoji ──
                                       Text(
-                                        isAnonymous ? '🤍' : '🌷',
-                                        style: const TextStyle(fontSize: 18),
+                                        isAnonymous ? '🤍' : sessionEmoji,
+                                        style:
+                                        const TextStyle(fontSize: 18),
                                       ),
                                     ],
                                   ),
@@ -1457,20 +1382,22 @@ class _FeedScreenState extends State<FeedScreen> {
                                           ? null
                                           : () {
                                         print('REPLY CANCEL TAPPED');
-
                                         if (Navigator.of(sheetContext)
                                             .canPop()) {
-                                          Navigator.of(sheetContext).pop();
+                                          Navigator.of(sheetContext)
+                                              .pop();
                                         }
                                       },
                                       child: Container(
                                         height: 48,
                                         decoration: BoxDecoration(
-                                          color: Colors.black.withOpacity(0.16),
-                                          borderRadius: BorderRadius.circular(18),
+                                          color:
+                                          Colors.black.withOpacity(0.16),
+                                          borderRadius:
+                                          BorderRadius.circular(18),
                                           border: Border.all(
-                                            color: ArriveColors.glassBorder,
-                                          ),
+                                              color:
+                                              ArriveColors.glassBorder),
                                         ),
                                         child: Center(
                                           child: Text(
@@ -1489,7 +1416,9 @@ class _FeedScreenState extends State<FeedScreen> {
                                   Expanded(
                                     flex: 2,
                                     child: GestureDetector(
-                                      onTap: isSubmitting ? null : submitReply,
+                                      onTap: isSubmitting
+                                          ? null
+                                          : submitReply,
                                       child: Container(
                                         height: 48,
                                         decoration: BoxDecoration(
@@ -1501,14 +1430,16 @@ class _FeedScreenState extends State<FeedScreen> {
                                             begin: Alignment.topLeft,
                                             end: Alignment.bottomRight,
                                           ),
-                                          borderRadius: BorderRadius.circular(18),
+                                          borderRadius:
+                                          BorderRadius.circular(18),
                                           border: Border.all(
-                                            color: _activeColor.withOpacity(0.65),
+                                            color: _activeColor
+                                                .withOpacity(0.65),
                                           ),
                                           boxShadow: [
                                             BoxShadow(
-                                              color:
-                                              _activeColor.withOpacity(0.22),
+                                              color: _activeColor
+                                                  .withOpacity(0.22),
                                               blurRadius: 18,
                                               offset: const Offset(0, 7),
                                             ),
@@ -1517,7 +1448,8 @@ class _FeedScreenState extends State<FeedScreen> {
                                         child: Center(
                                           child: isSubmitting
                                               ? Row(
-                                            mainAxisSize: MainAxisSize.min,
+                                            mainAxisSize:
+                                            MainAxisSize.min,
                                             children: [
                                               const SizedBox(
                                                 width: 17,
@@ -1531,7 +1463,8 @@ class _FeedScreenState extends State<FeedScreen> {
                                               const SizedBox(width: 8),
                                               Text(
                                                 'Sending...',
-                                                style: GoogleFonts.dmSans(
+                                                style:
+                                                GoogleFonts.dmSans(
                                                   fontSize: 13.5,
                                                   fontWeight:
                                                   FontWeight.w600,
@@ -1541,7 +1474,8 @@ class _FeedScreenState extends State<FeedScreen> {
                                             ],
                                           )
                                               : Row(
-                                            mainAxisSize: MainAxisSize.min,
+                                            mainAxisSize:
+                                            MainAxisSize.min,
                                             children: [
                                               const Icon(
                                                 Icons.send_rounded,
@@ -1551,7 +1485,8 @@ class _FeedScreenState extends State<FeedScreen> {
                                               const SizedBox(width: 7),
                                               Text(
                                                 'Send Reply',
-                                                style: GoogleFonts.dmSans(
+                                                style:
+                                                GoogleFonts.dmSans(
                                                   fontSize: 13.5,
                                                   fontWeight:
                                                   FontWeight.w600,
@@ -1625,24 +1560,18 @@ class _FeedScreenState extends State<FeedScreen> {
 
     try {
       final user = await SessionManager.getUser();
-
-      final int userId = int.tryParse(
-        user?['id']?.toString() ?? '',
-      ) ??
-          0;
-
+      final int userId = int.tryParse(user?['id']?.toString() ?? '') ?? 0;
       final int parsedPostId = int.tryParse(post.id) ?? 0;
 
       print('USER ID        : $userId');
       print('PARSED POST ID : $parsedPostId');
 
-      if (userId == 0) {
-        throw Exception('User not found');
-      }
+      if (userId == 0) throw Exception('User not found');
+      if (parsedPostId == 0) throw Exception('Invalid post id');
 
-      if (parsedPostId == 0) {
-        throw Exception('Invalid post id');
-      }
+      final String sessionEmoji = await SessionManager.getEmoji().then(
+            (e) => (e.trim().isNotEmpty) ? e.trim() : '🌷',
+      );
 
       final result = await CommunityPostReplyService.createReply(
         userId: userId,
@@ -1661,7 +1590,7 @@ class _FeedScreenState extends State<FeedScreen> {
         authorName: replyIsAnonymous
             ? 'Anonymous Mom'
             : data['author_name']?.toString() ?? 'You',
-        authorEmoji: replyIsAnonymous ? '🤍' : '🌷',
+        authorEmoji: replyIsAnonymous ? '🤍' : sessionEmoji,
         text: data['content']?.toString() ?? trimmedContent,
       );
 
@@ -1670,7 +1599,6 @@ class _FeedScreenState extends State<FeedScreen> {
       );
 
       existingReplies.add(newReply);
-
       _postReplies[post.id] = existingReplies;
       _expandedReplyPostIds.add(post.id);
 
@@ -1713,9 +1641,7 @@ class _FeedScreenState extends State<FeedScreen> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text(
-              e.toString().replaceAll('Exception: ', ''),
-            ),
+            content: Text(e.toString().replaceAll('Exception: ', '')),
           ),
         );
       }
@@ -1812,10 +1738,8 @@ class _FeedScreenState extends State<FeedScreen> {
                             child: ClipRRect(
                               borderRadius: BorderRadius.circular(20),
                               child: BackdropFilter(
-                                filter: ImageFilter.blur(
-                                  sigmaX: 8,
-                                  sigmaY: 8,
-                                ),
+                                filter:
+                                ImageFilter.blur(sigmaX: 8, sigmaY: 8),
                                 child: AnimatedContainer(
                                   duration: const Duration(milliseconds: 200),
                                   padding: const EdgeInsets.symmetric(
@@ -1883,10 +1807,7 @@ class _FeedScreenState extends State<FeedScreen> {
                     child: Column(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        const Text(
-                          '🌿',
-                          style: TextStyle(fontSize: 36),
-                        ),
+                        const Text('🌿', style: TextStyle(fontSize: 36)),
                         const SizedBox(height: 12),
                         Text(
                           'No posts here yet.',
