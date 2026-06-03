@@ -325,6 +325,7 @@ class _FeedScreenState extends State<FeedScreen> {
     );
   }
 
+  // ─── CHANGED: session emoji + userId fetch karke _mapToModel ko pass karo ──
   Future<void> _loadPosts() async {
     if (_isRefreshing) return;
 
@@ -335,6 +336,17 @@ class _FeedScreenState extends State<FeedScreen> {
     if (mounted) setState(() => _isRefreshing = true);
 
     try {
+      // ── Session data fetch karo ──
+      final user = await SessionManager.getUser();
+      final int sessionUserId =
+          int.tryParse(user?['id']?.toString() ?? '0') ?? 0;
+      final String sessionEmoji = await SessionManager.getEmoji().then(
+            (e) => (e.trim().isNotEmpty) ? e.trim() : '🌷',
+      );
+
+      print('SESSION USER ID    : $sessionUserId');
+      print('SESSION EMOJI      : $sessionEmoji');
+
       final result = await _fetchPostsBySelectedFilter(page: 1);
 
       final paginationData = result['data'] as Map<String, dynamic>? ?? {};
@@ -352,9 +364,14 @@ class _FeedScreenState extends State<FeedScreen> {
       print('CURRENT PAGE   : $currentPage');
       print('LAST PAGE      : $lastPage');
 
+      // ── CHANGED: sessionEmoji + sessionUserId pass karo ──
       final posts = rawList
           .whereType<Map<String, dynamic>>()
-          .map(_mapToModel)
+          .map((item) => _mapToModel(
+        item,
+        sessionEmoji: sessionEmoji,
+        sessionUserId: sessionUserId,
+      ))
           .toList();
 
       FeedPostsCache.set(_cacheKey, posts);
@@ -385,6 +402,7 @@ class _FeedScreenState extends State<FeedScreen> {
     }
   }
 
+  // ─── CHANGED: session emoji + userId fetch karke _mapToModel ko pass karo ──
   Future<void> _loadMore() async {
     if (_isLoadingMore) return;
     if (_isRefreshing) return;
@@ -400,25 +418,43 @@ class _FeedScreenState extends State<FeedScreen> {
 
       print('NEXT PAGE : $nextPage');
 
+      // ── Session data fetch karo ──
+      final user = await SessionManager.getUser();
+      final int sessionUserId =
+          int.tryParse(user?['id']?.toString() ?? '0') ?? 0;
+      final String sessionEmoji = await SessionManager.getEmoji().then(
+            (e) => (e.trim().isNotEmpty) ? e.trim() : '🌷',
+      );
+
+      print('SESSION USER ID    : $sessionUserId');
+      print('SESSION EMOJI      : $sessionEmoji');
+
       final result = await _fetchPostsBySelectedFilter(page: nextPage);
 
       final paginationData = result['data'] as Map<String, dynamic>? ?? {};
       final rawList = paginationData['data'] as List<dynamic>? ?? [];
 
       final int currentPage =
-          int.tryParse(paginationData['current_page']?.toString() ?? '$nextPage') ??
+          int.tryParse(paginationData['current_page']?.toString() ??
+              '$nextPage') ??
               nextPage;
       final int lastPage =
-          int.tryParse(paginationData['last_page']?.toString() ?? '$currentPage') ??
+          int.tryParse(paginationData['last_page']?.toString() ??
+              '$currentPage') ??
               currentPage;
 
       print('NEW POSTS RECEIVED : ${rawList.length}');
       print('CURRENT PAGE       : $currentPage');
       print('LAST PAGE          : $lastPage');
 
+      // ── CHANGED: sessionEmoji + sessionUserId pass karo ──
       final newPosts = rawList
           .whereType<Map<String, dynamic>>()
-          .map(_mapToModel)
+          .map((item) => _mapToModel(
+        item,
+        sessionEmoji: sessionEmoji,
+        sessionUserId: sessionUserId,
+      ))
           .toList();
 
       final combinedPosts = <PostModel>[..._posts, ...newPosts];
@@ -465,7 +501,12 @@ class _FeedScreenState extends State<FeedScreen> {
     _loadPosts();
   }
 
-  PostModel _mapToModel(Map<String, dynamic> item) {
+  // ─── CHANGED: sessionEmoji aur sessionUserId parameters add kiye ──────────
+  PostModel _mapToModel(
+      Map<String, dynamic> item, {
+        String sessionEmoji = '🌷',
+        int sessionUserId = 0,
+      }) {
     final String apiType =
         item['post_type']?.toString().trim().toLowerCase() ?? 'thought';
 
@@ -474,10 +515,21 @@ class _FeedScreenState extends State<FeedScreen> {
         item['is_anonymous']?.toString() == '1' ||
         item['is_anonymous']?.toString().toLowerCase() == 'true';
 
+    // ── CHANGED: is_own field check karo, ya user_id se compare karo ──
+    final bool isOwnPost = item['is_own'] == true ||
+        item['is_own']?.toString() == '1' ||
+        item['is_own']?.toString().toLowerCase() == 'true' ||
+        (sessionUserId != 0 &&
+            int.tryParse(item['user_id']?.toString() ?? '0') ==
+                sessionUserId);
+
     print('---------- MAP POST ----------');
     print('ID        : ${item['id']}');
     print('TYPE      : $apiType');
     print('ANONYMOUS : $isAnon');
+    print('OWN POST  : $isOwnPost');
+    print('USER ID   : ${item['user_id']}');
+    print('SESSION ID: $sessionUserId');
     print('SAVED     : ${item['user_saved']}');
     print('HUGGED    : ${item['user_hugged']}');
     print('FELT      : ${item['user_felt']}');
@@ -485,11 +537,15 @@ class _FeedScreenState extends State<FeedScreen> {
     print('REPLIES   : ${item['reply_count']}');
     print('AUTHOR    : ${item['author_name']}');
     print('CONTENT   : ${item['content']}');
-    print('EMOJI     : ${item['emoji']}');
+    print('API EMOJI : ${item['emoji']}');
+    print('SES EMOJI : $sessionEmoji');
     print('------------------------------');
 
+    // ── CHANGED: apne post pe session emoji, dusron ke post pe unka emoji ──
     final String authorEmoji = isAnon
         ? '🤍'
+        : isOwnPost
+        ? sessionEmoji
         : (item['emoji']?.toString().trim().isNotEmpty == true
         ? item['emoji'].toString().trim()
         : '🌷');
@@ -515,6 +571,7 @@ class _FeedScreenState extends State<FeedScreen> {
           item['user_saved']?.toString() == '1' ||
           item['user_saved']?.toString().toLowerCase() == 'true',
       isAnonymous: isAnon,
+      isOwn: isOwnPost, // ── CHANGED: isOwn bhi set karo ──
     );
   }
 
@@ -934,6 +991,7 @@ class _FeedScreenState extends State<FeedScreen> {
             data['user_saved']?.toString() == '1' ||
             data['user_saved']?.toString().toLowerCase() == 'true',
         isAnonymous: postIsAnonymous,
+        isOwn: true, // ── CHANGED: naya post hamesha apna hota hai ──
       );
 
       final String allKey =
@@ -1015,7 +1073,6 @@ class _FeedScreenState extends State<FeedScreen> {
     bool isAnonymous = false;
     bool isSubmitting = false;
 
-    // ── Session emoji fetch karo sheet open hote waqt ──
     String sessionEmoji = '🌷';
     SessionManager.getEmoji().then((e) {
       if (e.trim().isNotEmpty) sessionEmoji = e.trim();
@@ -1363,7 +1420,6 @@ class _FeedScreenState extends State<FeedScreen> {
                                           ],
                                         ),
                                       ),
-                                      // ── CHANGE: 🌷 ki jagah sessionEmoji ──
                                       Text(
                                         isAnonymous ? '🤍' : sessionEmoji,
                                         style:

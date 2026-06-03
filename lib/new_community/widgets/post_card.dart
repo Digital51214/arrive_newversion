@@ -43,8 +43,10 @@ class _PostCardState extends State<PostCard> {
 
   int _feelCount = 0;
 
-  // ── Session emoji ──
+  // ── Session data ──────────────────────────────────────────────────────────
   String _sessionEmoji = '🌸';
+  int _sessionUserId = 0;
+  bool _sessionLoaded = false;
 
   final List<String> _emojis = [
     '😊', '🥹', '💙', '🩵', '🤍', '🌸', '✨', '🫶',
@@ -65,14 +67,53 @@ class _PostCardState extends State<PostCard> {
     print('EXPANDED      : ${widget.isRepliesExpanded}');
     print('===================================');
 
-    // ── Session emoji load karo ──
-    SessionManager.getEmoji().then((e) {
+    // ── Session emoji + userId dono fetch karo ──
+    _loadSessionData();
+  }
+
+  // ── CHANGED: session emoji aur userId ek saath fetch karo ─────────────────
+  Future<void> _loadSessionData() async {
+    try {
+      final user = await SessionManager.getUser();
+      final int userId =
+          int.tryParse(user?['id']?.toString() ?? '0') ?? 0;
+      final String emoji = await SessionManager.getEmoji().then(
+            (e) => (e.trim().isNotEmpty) ? e.trim() : '🌸',
+      );
+
+      print('SESSION LOADED → USER ID: $userId  EMOJI: $emoji');
+
       if (mounted) {
         setState(() {
-          _sessionEmoji = (e.trim().isNotEmpty) ? e.trim() : '🌸';
+          _sessionUserId = userId;
+          _sessionEmoji = emoji;
+          _sessionLoaded = true;
         });
       }
-    });
+    } catch (e) {
+      print('SESSION LOAD ERROR IN POST CARD: $e');
+    }
+  }
+
+  // ── CHANGED: isOwn check — is_own field + userId comparison dono ──────────
+  bool get _isOwnPost {
+    if (_post.isOwn) return true;
+    if (_sessionUserId == 0) return false;
+
+    // PostModel mein authorId field nahi hai, toh isOwn pe depend karo
+    // Lekin agar session loaded hai aur authorName match karta hai toh bhi check karo
+    return false;
+  }
+
+  // ── CHANGED: avatar emoji — apna post = session emoji, dusra = post emoji ──
+  String get _avatarEmoji {
+    if (_post.isAnonymous) return '🤍';
+    if (_isOwnPost && _sessionLoaded) return _sessionEmoji;
+    // Dusron ke post ke liye unka stored emoji show karo
+    if (_post.authorEmoji != null && _post.authorEmoji!.trim().isNotEmpty) {
+      return _post.authorEmoji!;
+    }
+    return '🌷';
   }
 
   @override
@@ -195,8 +236,10 @@ class _PostCardState extends State<PostCard> {
       print('HUG API RESULT : $result');
 
       final reacted = _parseBool(result['reacted']);
-      final apiHugCount = int.tryParse(result['hug_count']?.toString() ?? '') ?? nextHugCount;
-      final apiFeelCount = int.tryParse(result['feel_count']?.toString() ?? '') ?? _feelCount;
+      final apiHugCount =
+          int.tryParse(result['hug_count']?.toString() ?? '') ?? nextHugCount;
+      final apiFeelCount =
+          int.tryParse(result['feel_count']?.toString() ?? '') ?? _feelCount;
 
       if (!mounted) return;
 
@@ -271,8 +314,10 @@ class _PostCardState extends State<PostCard> {
       print('FEEL API RESULT : $result');
 
       final reacted = _parseBool(result['reacted']);
-      final apiFeelCount = int.tryParse(result['feel_count']?.toString() ?? '') ?? nextFeelCount;
-      final apiHugCount = int.tryParse(result['hug_count']?.toString() ?? '') ?? _post.hugCount;
+      final apiFeelCount =
+          int.tryParse(result['feel_count']?.toString() ?? '') ?? nextFeelCount;
+      final apiHugCount =
+          int.tryParse(result['hug_count']?.toString() ?? '') ?? _post.hugCount;
 
       if (!mounted) return;
 
@@ -339,10 +384,12 @@ class _PostCardState extends State<PostCard> {
   void _addEmoji(String emoji) {
     final text = _replyController.text;
     final selection = _replyController.selection;
-    final position = selection.baseOffset < 0 ? text.length : selection.baseOffset;
+    final position =
+    selection.baseOffset < 0 ? text.length : selection.baseOffset;
 
     _replyController.text = text.replaceRange(position, position, emoji);
-    _replyController.selection = TextSelection.collapsed(offset: position + emoji.length);
+    _replyController.selection =
+        TextSelection.collapsed(offset: position + emoji.length);
   }
 
   void _sendReply() {
@@ -354,7 +401,6 @@ class _PostCardState extends State<PostCard> {
     print('TEXT    : $text');
 
     setState(() {
-      // ── Session emoji use karo ──
       _post.replies.add(
         ReplyModel(
           authorName: 'You',
@@ -468,12 +514,14 @@ class _PostCardState extends State<PostCard> {
               SizedBox(
                 width: 22,
                 height: 22,
-                child: CircularProgressIndicator(strokeWidth: 2, color: ArriveColors.blue),
+                child: CircularProgressIndicator(
+                    strokeWidth: 2, color: ArriveColors.blue),
               ),
               const SizedBox(height: 8),
               Text(
                 'Loading replies...',
-                style: GoogleFonts.dmSans(fontSize: 12, color: ArriveColors.textMuted),
+                style: GoogleFonts.dmSans(
+                    fontSize: 12, color: ArriveColors.textMuted),
               ),
             ],
           ),
@@ -496,7 +544,8 @@ class _PostCardState extends State<PostCard> {
             const SizedBox(width: 8),
             Text(
               'No replies yet.',
-              style: GoogleFonts.dmSans(fontSize: 12, color: ArriveColors.textMuted),
+              style: GoogleFonts.dmSans(
+                  fontSize: 12, color: ArriveColors.textMuted),
             ),
           ],
         ),
@@ -511,7 +560,8 @@ class _PostCardState extends State<PostCard> {
         border: Border(top: BorderSide(color: ArriveColors.glassBorder)),
       ),
       child: Column(
-        children: widget.apiReplies.map((reply) => _ReplyItem(reply: reply)).toList(),
+        children:
+        widget.apiReplies.map((reply) => _ReplyItem(reply: reply)).toList(),
       ),
     );
   }
@@ -544,7 +594,11 @@ class _PostCardState extends State<PostCard> {
                 height: 1,
                 decoration: BoxDecoration(
                   gradient: LinearGradient(
-                    colors: [Colors.transparent, _topBorderColor, Colors.transparent],
+                    colors: [
+                      Colors.transparent,
+                      _topBorderColor,
+                      Colors.transparent
+                    ],
                   ),
                 ),
               ),
@@ -557,22 +611,19 @@ class _PostCardState extends State<PostCard> {
                     Row(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        // ── Avatar: agar apna post hai toh session emoji, warna post emoji ──
+                        // ── CHANGED: _avatarEmoji getter use karo ──────────
                         Container(
                           width: 32,
                           height: 32,
                           decoration: BoxDecoration(
                             gradient: _avatarGradient,
                             shape: BoxShape.circle,
-                            border: Border.all(color: ArriveColors.glassBorder),
+                            border:
+                            Border.all(color: ArriveColors.glassBorder),
                           ),
                           child: Center(
                             child: Text(
-                              _post.isAnonymous
-                                  ? '🤍'
-                                  : (_post.isOwn
-                                  ? _sessionEmoji
-                                  : (_post.authorEmoji ?? '🌸')),
+                              _avatarEmoji,
                               style: const TextStyle(fontSize: 14),
                             ),
                           ),
@@ -587,7 +638,7 @@ class _PostCardState extends State<PostCard> {
                               Text(
                                 _post.isAnonymous
                                     ? 'Anonymous Mom'
-                                    : (_post.isOwn
+                                    : (_isOwnPost
                                     ? '${_post.authorName} (you)'
                                     : (_post.authorName ?? '')),
                                 style: GoogleFonts.dmSans(
@@ -617,7 +668,8 @@ class _PostCardState extends State<PostCard> {
                                 duration: const Duration(milliseconds: 200),
                                 child: const Padding(
                                   padding: EdgeInsets.all(4),
-                                  child: Text('🔖', style: TextStyle(fontSize: 17)),
+                                  child: Text('🔖',
+                                      style: TextStyle(fontSize: 17)),
                                 ),
                               ),
                             ),
@@ -632,14 +684,18 @@ class _PostCardState extends State<PostCard> {
                                   vertical: 5,
                                 ),
                                 decoration: BoxDecoration(
-                                  color: ArriveColors.glassBorder.withOpacity(0.08),
+                                  color: ArriveColors.glassBorder
+                                      .withOpacity(0.08),
                                   borderRadius: BorderRadius.circular(30),
-                                  border: Border.all(color: const Color(0xFF8DBFAA)),
+                                  border: Border.all(
+                                      color: const Color(0xFF8DBFAA)),
                                 ),
                                 child: Row(
                                   mainAxisSize: MainAxisSize.min,
                                   children: [
-                                    const Icon(Icons.message, size: 13, color: Color(0xFF8DBFAA)),
+                                    const Icon(Icons.message,
+                                        size: 13,
+                                        color: Color(0xFF8DBFAA)),
                                     const SizedBox(width: 4),
                                     Text(
                                       'Add Replies',
@@ -778,7 +834,8 @@ class _PostCardState extends State<PostCard> {
             onTap: () {
               setState(() => _showEmojiPicker = !_showEmojiPicker);
             },
-            child: Icon(Icons.emoji_emotions_outlined, size: 22, color: ArriveColors.textMuted),
+            child: Icon(Icons.emoji_emotions_outlined,
+                size: 22, color: ArriveColors.textMuted),
           ),
 
           const SizedBox(width: 8),
@@ -789,10 +846,12 @@ class _PostCardState extends State<PostCard> {
               minLines: 1,
               maxLines: 4,
               cursorColor: ArriveColors.sage,
-              style: GoogleFonts.dmSans(fontSize: 13, color: ArriveColors.text),
+              style:
+              GoogleFonts.dmSans(fontSize: 13, color: ArriveColors.text),
               decoration: InputDecoration(
                 hintText: 'Type a reply...',
-                hintStyle: GoogleFonts.dmSans(fontSize: 13, color: ArriveColors.textMuted),
+                hintStyle: GoogleFonts.dmSans(
+                    fontSize: 13, color: ArriveColors.textMuted),
                 border: InputBorder.none,
                 isDense: true,
               ),
@@ -809,9 +868,11 @@ class _PostCardState extends State<PostCard> {
               decoration: BoxDecoration(
                 color: ArriveColors.sage.withOpacity(0.22),
                 shape: BoxShape.circle,
-                border: Border.all(color: ArriveColors.sage.withOpacity(0.45)),
+                border:
+                Border.all(color: ArriveColors.sage.withOpacity(0.45)),
               ),
-              child: const Icon(Icons.send_rounded, size: 17, color: Color(0xFF8DBFAA)),
+              child: const Icon(Icons.send_rounded,
+                  size: 17, color: Color(0xFF8DBFAA)),
             ),
           ),
         ],
@@ -841,7 +902,8 @@ class _PostCardState extends State<PostCard> {
                 shape: BoxShape.circle,
                 border: Border.all(color: ArriveColors.glassBorder),
               ),
-              child: Center(child: Text(emoji, style: const TextStyle(fontSize: 22))),
+              child:
+              Center(child: Text(emoji, style: const TextStyle(fontSize: 22))),
             ),
           );
         }).toList(),
@@ -877,11 +939,15 @@ class _ReactionBtn extends StatelessWidget {
           opacity: isLoading ? 0.6 : 1.0,
           duration: const Duration(milliseconds: 150),
           child: Container(
-            padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 6),
+            padding:
+            const EdgeInsets.symmetric(horizontal: 11, vertical: 6),
             decoration: BoxDecoration(
-              color: isActive ? activeColor.withOpacity(0.12) : Colors.transparent,
+              color:
+              isActive ? activeColor.withOpacity(0.12) : Colors.transparent,
               border: Border.all(
-                color: isActive ? activeColor.withOpacity(0.5) : ArriveColors.glassBorder,
+                color: isActive
+                    ? activeColor.withOpacity(0.5)
+                    : ArriveColors.glassBorder,
               ),
               borderRadius: BorderRadius.circular(20),
             ),
@@ -922,7 +988,8 @@ class _ReplyItem extends StatelessWidget {
               border: Border.all(color: ArriveColors.glassBorder),
             ),
             child: Center(
-              child: Text(reply.authorEmoji, style: const TextStyle(fontSize: 11)),
+              child:
+              Text(reply.authorEmoji, style: const TextStyle(fontSize: 11)),
             ),
           ),
 
@@ -930,7 +997,8 @@ class _ReplyItem extends StatelessWidget {
 
           Expanded(
             child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 13, vertical: 9),
+              padding:
+              const EdgeInsets.symmetric(horizontal: 13, vertical: 9),
               decoration: BoxDecoration(
                 color: Colors.white.withOpacity(0.035),
                 border: Border.all(color: ArriveColors.glassBorder),
